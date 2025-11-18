@@ -18,10 +18,10 @@ This project uses [uv](https://github.com/astral-sh/uv) for dependency managemen
 uv sync --dev
 
 # Build the C++ extension
-./build.sh
+make
 
 # Run tests
-uv run pytest boggle/
+make test
 ```
 
 ## Usage
@@ -110,15 +110,24 @@ uv run python -m boggle.score --dictionary wordlists/twl06.txt
 
 ## Development
 
+Build the extension:
+```bash
+make
+```
+
 Run tests:
 ```bash
-uv run pytest boggle/
+make test
 ```
 
 Format code:
 ```bash
-ruff format boggle/
-clang-format -i cpp/*.{h,cc}
+make format
+```
+
+Clean build artifacts:
+```bash
+make clean
 ```
 
 ## License
