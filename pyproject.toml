@@ -1,0 +1,25 @@
+[project]
+name = "boggle-zoo"
+version = "0.1.0"
+description = "Fast Boggle board scoring"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "pybind11>=2.13.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.4",
+    "inline-snapshot>=0.20.2",
+]
+
+[project.scripts]
+boggle-score = "boggle.score:main"
+boggle-perf = "boggle.perf:main"
+
+[dependency-groups]
+dev = [
+    "inline-snapshot>=0.31.1",
+    "pytest>=9.0.1",
+]
