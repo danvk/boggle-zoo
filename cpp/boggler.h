@@ -4,7 +4,7 @@
 
 #include <unordered_set>
 
-#include "board_class_boggler.h"
+#include "neighbors.h"
 #include "constants.h"
 #include "trie.h"
 
@@ -378,7 +378,7 @@ void Boggler<M, N>::FindWordsDFS(
     }
   }
 
-  auto& neighbors = BoardClassBoggler<M, N>::NEIGHBORS[i];
+  auto& neighbors = Neighbors<M, N>::NEIGHBORS[i];
   auto n_neighbors = neighbors[0];
   for (int j = 1; j <= n_neighbors; j++) {
     auto idx = neighbors[j];
