@@ -1,16 +1,16 @@
-#include <stdint.h>
-
 #ifndef BOARD_CLASS_BOGGLER_H
 #define BOARD_CLASS_BOGGLER_H
 
+#include <stdint.h>
 #include "trie.h"
 
 // TODO: templating on M, N probably isn't that helpful here, or on any
 // implementations except BucketBoggler.
 template <int M, int N>
-class BoardClassBoggler {
- public:
-  BoardClassBoggler(Trie* t) : dict_(t), used_(0) {}
+class BoardClassBoggler
+{
+public:
+  BoardClassBoggler(Trie *t) : dict_(t), used_(0) {}
   virtual ~BoardClassBoggler() {}
 
   // bd is a class of boards with cells delimited by spaces.
@@ -18,8 +18,8 @@ class BoardClassBoggler {
   // "a b c d e f g h i j k l m n o p"
   // "aeiou bcdfghjklmnprstvwxyz aeiou ..."
   // NOTE: "qu" gets interpreted as "qu" or "u".
-  bool ParseBoard(const char* bd);
-  const char* as_string();
+  bool ParseBoard(const char *bd);
+  const char *as_string();
 
   // Returns the number of individual boards in the current board class. This
   // isn't guaranteed to fit in a uint64_t, but will for any class you care to
@@ -30,36 +30,47 @@ class BoardClassBoggler {
   static const int NEIGHBORS[M * N][9];
   static const int SPLIT_ORDER[M * N];
 
- protected:
-  Trie* dict_;
-  char bd_[M * N][27];  // null-terminated lists of possible letters
+protected:
+  Trie *dict_;
+  char bd_[M * N][27]; // null-terminated lists of possible letters
   unsigned int used_;
-  char board_rep_[27 * M * N];  // for as_string()
+  char board_rep_[27 * M * N]; // for as_string()
 };
 
 // For debugging:
 static const bool PrintWords = false;
 
 template <int M, int N>
-bool BoardClassBoggler<M, N>::ParseBoard(const char* bd) {
+bool BoardClassBoggler<M, N>::ParseBoard(const char *bd)
+{
   int max_len = M * N - 1;
   int cell = 0;
   int cell_pos = 0;
-  while (char c = *bd++) {
-    if (c == ' ') {
-      if (cell_pos == 0) return false;  // empty cell
+  while (char c = *bd++)
+  {
+    if (c == ' ')
+    {
+      if (cell_pos == 0)
+        return false; // empty cell
       bd_[cell][cell_pos] = '\0';
       cell += 1;
       cell_pos = 0;
-      if (cell > max_len) return false;  // too many cells
-    } else if (c == '.') {
+      if (cell > max_len)
+        return false; // too many cells
+    }
+    else if (c == '.')
+    {
       // explicit "don't go here" cell, useful for tests
       bd_[cell][0] = '\0';
       cell_pos = 1;
-    } else {
-      if (c < 'a' || c > 'z') return false;  // invalid letter
+    }
+    else
+    {
+      if (c < 'a' || c > 'z')
+        return false; // invalid letter
       bd_[cell][cell_pos++] = c;
-      if (cell_pos >= 27) return false;  // too many letters on a cell
+      if (cell_pos >= 27)
+        return false; // too many letters on a cell
     }
   }
   bd_[cell][cell_pos] = '\0';
@@ -67,20 +78,27 @@ bool BoardClassBoggler<M, N>::ParseBoard(const char* bd) {
 }
 
 template <int M, int N>
-uint64_t BoardClassBoggler<M, N>::NumReps() const {
+uint64_t BoardClassBoggler<M, N>::NumReps() const
+{
   uint64_t reps = 1;
-  for (int i = 0; i < M * N; i++) reps *= strlen(bd_[i]);
+  for (int i = 0; i < M * N; i++)
+    reps *= strlen(bd_[i]);
   return reps;
 }
 
 template <int M, int N>
-const char* BoardClassBoggler<M, N>::as_string() {
-  char* c = board_rep_;
-  for (int i = 0; i < M * N; i++) {
-    if (*bd_[i]) {
+const char *BoardClassBoggler<M, N>::as_string()
+{
+  char *c = board_rep_;
+  for (int i = 0; i < M * N; i++)
+  {
+    if (*bd_[i])
+    {
       strcpy(c, bd_[i]);
       c += strlen(bd_[i]);
-    } else {
+    }
+    else
+    {
       strcpy(c++, ".");
     }
     *c++ = (i == (M * N - 1) ? '\0' : ' ');
@@ -276,4 +294,4 @@ const int BoardClassBoggler<5, 5>::SPLIT_ORDER[5*5] = {12, 7, 11, 17, 13, 6, 8, 
 
 // clang-format on
 
-#endif  // BOARD_CLASS_BOGGLER_H
+#endif // BOARD_CLASS_BOGGLER_H
