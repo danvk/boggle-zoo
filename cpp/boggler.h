@@ -6,12 +6,12 @@
 
 #include "neighbors.h"
 #include "constants.h"
-#include "trie.h"
+#include "prefix_dictionary.h"
 
 template <int M, int N>
 class Boggler {
  public:
-  Boggler(Trie* t) : dict_(t), runs_(0) {
+  Boggler(PrefixDictionary* dict) : dict_(dict), runs_(0) {
     static_assert(
         sizeof(kWordScores) / sizeof(kWordScores[0]) - 1 >= M * N,
         "kWordScores must have at least M * N + 1 elements"
@@ -31,18 +31,19 @@ class Boggler {
   vector<vector<int>> FindWords(const string& lets, bool multiboggle);
 
  private:
-  void DoDFS(unsigned int i, unsigned int len, Trie* t);
+  void DoDFS(unsigned int i, unsigned int len);
   void FindWordsDFS(
-      unsigned int i, Trie* t, bool multiboggle, vector<vector<int>>& out
+      unsigned int i, bool multiboggle, vector<vector<int>>& out
   );
   unsigned int InternalScore();
   bool ParseBoard(const char* bd);
 
-  Trie* dict_;
+  PrefixDictionary* dict_;
   unsigned int used_;
   int bd_[M * N];
   unsigned int score_;
   unsigned int runs_;
+  string word_;  // Current word being built during DFS
   vector<int> seq_;
   unordered_set<uint64_t> found_words_;
 };
@@ -98,25 +99,33 @@ bool Boggler<M, N>::ParseBoard(const char* bd) {
 
 template <int M, int N>
 unsigned int Boggler<M, N>::InternalScore() {
-  runs_ = dict_->Mark() + 1;
-  dict_->Mark(runs_);
+  runs_++;
+  dict_->ResetMarks();
   used_ = 0;
   score_ = 0;
+  word_.clear();
+  word_.reserve(M * N);
   for (int i = 0; i < M * N; i++) {
     int c = bd_[i];
-    if (dict_->StartsWord(c)) DoDFS(i, 0, dict_->Descend(c));
+    word_.push_back('a' + c);
+    if (dict_->HasPrefix(word_)) {
+      DoDFS(i, 0);
+    }
+    word_.pop_back();
   }
   return score_;
 }
 
-#define REC(idx)                         \
-  do {                                   \
-    if ((used_ & (1 << idx)) == 0) {     \
-      cc = bd_[idx];                     \
-      if (t->StartsWord(cc)) {           \
-        DoDFS(idx, len, t->Descend(cc)); \
-      }                                  \
-    }                                    \
+#define REC(idx)                              \
+  do {                                        \
+    if ((used_ & (1 << idx)) == 0) {          \
+      cc = bd_[idx];                          \
+      word_.push_back('a' + cc);              \
+      if (dict_->HasPrefix(word_)) {          \
+        DoDFS(idx, len);                      \
+      }                                       \
+      word_.pop_back();                       \
+    }                                         \
   } while (0)
 
 #define REC3(a, b, c) \
@@ -134,15 +143,15 @@ unsigned int Boggler<M, N>::InternalScore() {
   REC3(f, g, h)
 
 // PREFIX and SUFFIX could be inline methods instead, but this incurs a ~5% perf hit.
-#define PREFIX()                  \
-  int c = bd_[i], cc;             \
-  used_ ^= (1 << i);              \
-  len += (c == kQ ? 2 : 1);       \
-  if (t->IsWord()) {              \
-    if (t->Mark() != runs_) {     \
-      t->Mark(runs_);             \
-      score_ += kWordScores[len]; \
-    }                             \
+#define PREFIX()                        \
+  int c = bd_[i], cc;                   \
+  used_ ^= (1 << i);                    \
+  len += (c == kQ ? 2 : 1);             \
+  if (dict_->IsWord(word_)) {           \
+    if (dict_->GetMark(word_) != runs_) { \
+      dict_->MarkWord(word_, runs_);    \
+      score_ += kWordScores[len];       \
+    }                                   \
   }
 
 #define SUFFIX() used_ ^= (1 << i)
@@ -170,7 +179,7 @@ void Boggler<{w}, {h}>::DoDFS(unsigned int i, unsigned int len, Trie* t) {{
 
 // 2x2
 template<>
-void Boggler<2, 2>::DoDFS(unsigned int i, unsigned int len, Trie* t) {
+void Boggler<2, 2>::DoDFS(unsigned int i, unsigned int len) {
   PREFIX();
   switch(i) {
     case 0: REC3(1, 2, 3); break;
@@ -183,7 +192,7 @@ void Boggler<2, 2>::DoDFS(unsigned int i, unsigned int len, Trie* t) {
 
 // 2x3
 template<>
-void Boggler<2, 3>::DoDFS(unsigned int i, unsigned int len, Trie* t) {
+void Boggler<2, 3>::DoDFS(unsigned int i, unsigned int len) {
   PREFIX();
   switch(i) {
     case 0: REC3(1, 3, 4); break;
@@ -198,7 +207,7 @@ void Boggler<2, 3>::DoDFS(unsigned int i, unsigned int len, Trie* t) {
 
 // 3x3
 template<>
-void Boggler<3, 3>::DoDFS(unsigned int i, unsigned int len, Trie* t) {
+void Boggler<3, 3>::DoDFS(unsigned int i, unsigned int len) {
   PREFIX();
   switch(i) {
     case 0: REC3(1, 3, 4); break;
@@ -216,7 +225,7 @@ void Boggler<3, 3>::DoDFS(unsigned int i, unsigned int len, Trie* t) {
 
 // 3x4
 template<>
-void Boggler<3, 4>::DoDFS(unsigned int i, unsigned int len, Trie* t) {
+void Boggler<3, 4>::DoDFS(unsigned int i, unsigned int len) {
   PREFIX();
   switch(i) {
     case 0: REC3(1, 4, 5); break;
@@ -237,7 +246,7 @@ void Boggler<3, 4>::DoDFS(unsigned int i, unsigned int len, Trie* t) {
 
 // 4x4
 template<>
-void Boggler<4, 4>::DoDFS(unsigned int i, unsigned int len, Trie* t) {
+void Boggler<4, 4>::DoDFS(unsigned int i, unsigned int len) {
   PREFIX();
   switch(i) {
     case 0: REC3(1, 4, 5); break;
@@ -262,7 +271,7 @@ void Boggler<4, 4>::DoDFS(unsigned int i, unsigned int len, Trie* t) {
 
 // 4x5
 template<>
-void Boggler<4, 5>::DoDFS(unsigned int i, unsigned int len, Trie* t) {
+void Boggler<4, 5>::DoDFS(unsigned int i, unsigned int len) {
   PREFIX();
   switch(i) {
     case 0: REC3(1, 5, 6); break;
@@ -291,7 +300,7 @@ void Boggler<4, 5>::DoDFS(unsigned int i, unsigned int len, Trie* t) {
 
 // 5x5
 template<>
-void Boggler<5, 5>::DoDFS(unsigned int i, unsigned int len, Trie* t) {
+void Boggler<5, 5>::DoDFS(unsigned int i, unsigned int len) {
   PREFIX();
   switch(i) {
     case 0: REC3(1, 5, 6); break;
@@ -337,20 +346,26 @@ vector<vector<int>> Boggler<M, N>::FindWords(const string& lets, bool multiboggl
   found_words_.clear();
   seq_.clear();
   seq_.reserve(M * N);
+  word_.clear();
+  word_.reserve(M * N);
   vector<vector<int>> out;
   if (!ParseBoard(lets.c_str())) {
     out.push_back({-1});
     return out;
   }
 
-  runs_ = dict_->Mark() + 1;
-  dict_->Mark(runs_);
+  runs_++;
+  dict_->ResetMarks();
   used_ = 0;
   score_ = 0;
   for (int i = 0; i < M * N; i++) {
     int c = bd_[i];
-    if (c != -1 && dict_->StartsWord(c)) {
-      FindWordsDFS(i, dict_->Descend(c), multiboggle, out);
+    if (c != -1) {
+      word_.push_back('a' + c);
+      if (dict_->HasPrefix(word_)) {
+        FindWordsDFS(i, multiboggle, out);
+      }
+      word_.pop_back();
     }
   }
   return out;
@@ -359,21 +374,22 @@ vector<vector<int>> Boggler<M, N>::FindWords(const string& lets, bool multiboggl
 // This could be specialized, but it's not as performance-sensitive as DoDFS()
 template <int M, int N>
 void Boggler<M, N>::FindWordsDFS(
-    unsigned int i, Trie* t, bool multiboggle, vector<vector<int>>& out
+    unsigned int i, bool multiboggle, vector<vector<int>>& out
 ) {
   used_ ^= (1 << i);
   seq_.push_back(i);
-  if (t->IsWord()) {
+  if (dict_->IsWord(word_)) {
     bool should_count;
     if (multiboggle) {
-      uint64_t key = (((uint64_t)t->WordId()) << 32) + used_;
+      int word_id = dict_->GetWordId(word_);
+      uint64_t key = (((uint64_t)word_id) << 32) + used_;
       auto result = found_words_.emplace(key);
       should_count = result.second;
     } else {
-      should_count = (t->Mark() != runs_);
+      should_count = (dict_->GetMark(word_) != runs_);
     }
     if (should_count) {
-      t->Mark(runs_);
+      dict_->MarkWord(word_, runs_);
       out.push_back(seq_);
     }
   }
@@ -384,8 +400,12 @@ void Boggler<M, N>::FindWordsDFS(
     auto idx = neighbors[j];
     if ((used_ & (1 << idx)) == 0) {
       int cc = bd_[idx];
-      if (cc != -1 && t->StartsWord(cc)) {
-        FindWordsDFS(idx, t->Descend(cc), multiboggle, out);
+      if (cc != -1) {
+        word_.push_back('a' + cc);
+        if (dict_->HasPrefix(word_)) {
+          FindWordsDFS(idx, multiboggle, out);
+        }
+        word_.pop_back();
       }
     }
   }

@@ -14,7 +14,7 @@ import time
 from typing import Sequence
 
 from boggle.args import add_standard_args, get_trie_and_boggler_from_args
-from boggle.constants import A_TO_Z, neighbors
+from boggle.constants import neighbors
 
 
 def random_board(n: int, letters: Sequence[str]) -> str:

@@ -19,33 +19,31 @@ def test_trie():
             "teapot",
         ]
     )
-    assert not t.is_word()
+    assert not t.is_word("")  # Empty string is not a word
 
     assert t.size() == 6
-    assert t.find_word("agriculture") is not None
-    assert t.find_word("culture") is not None
-    assert t.find_word("boggle") is not None
-    assert t.find_word("tea") is not None
-    assert t.find_word("sea") is not None
-    assert t.find_word("teapot") is not None
+    assert t.is_word("agriculture")
+    assert t.is_word("culture")
+    assert t.is_word("boggle")
+    assert t.is_word("tea")
+    assert t.is_word("sea")
+    assert t.is_word("teapot")
 
-    assert t.find_word("teap") is None
-    assert t.find_word("random") is None
-    assert t.find_word("cultur") is None
+    assert not t.is_word("teap")
+    assert not t.is_word("random")
+    assert not t.is_word("cultur")
 
-    wd = t.descend(asc("t"))
-    assert wd is not None
-    wd = wd.descend(asc("e"))
-    assert wd is not None
-    wd = wd.descend(asc("a"))
-    assert wd is not None
-    assert wd.mark() == 0
-    wd.set_mark(12345)
-    assert wd.mark() == 12345
+    # Test prefix checking
+    assert t.has_prefix("t")
+    assert t.has_prefix("te")
+    assert t.has_prefix("tea")
+    assert t.get_mark("tea") == 0
+    t.mark_word("tea", 12345)
+    assert t.get_mark("tea") == 12345
 
-    child = t.find_word("agriculture")
-    assert child is not None
-    assert Trie.reverse_lookup(t, child) == "agriculture"
+    # Test word IDs
+    assert t.get_word_id("agriculture") >= 0
+    assert t.get_word_id("boggle") >= 0
 
 
 def test_bogglify_word():
@@ -58,7 +56,7 @@ def test_bogglify_word():
 
 def test_load_file():
     t = Trie.create_from_file("testdata/boggle-words-4.txt")
-    assert not t.is_word()
+    assert not t.is_word("")  # Empty string is not a word
 
-    assert t.find_word("wood") is not None
-    assert t.find_word("woxd") is None
+    assert t.is_word("wood")
+    assert not t.is_word("woxd")
