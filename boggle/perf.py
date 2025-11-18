@@ -11,13 +11,14 @@ total_score=41134010
 import argparse
 import random
 import time
+from typing import Sequence
 
 from boggle.args import add_standard_args, get_trie_and_boggler_from_args
-from boggle.constants import A_TO_Z, LETTER_A, neighbors
+from boggle.constants import A_TO_Z, neighbors
 
 
-def random_board(n: int) -> str:
-    return "".join(chr(LETTER_A + random.randint(0, 25)) for _ in range(n))
+def random_board(n: int, letters: Sequence[str]) -> str:
+    return "".join(random.choice(letters) for _ in range(n))
 
 
 def main():
@@ -44,6 +45,11 @@ def main():
         default=100_000,
         nargs="?",
     )
+    parser.add_argument(
+        "--jpa14",
+        action="store_true",
+        help="Generate random boards using a 14-letter alphabet instead of 26.",
+    )
     args = parser.parse_args()
     if args.random_seed >= 0:
         random.seed(args.random_seed)
@@ -52,11 +58,13 @@ def main():
     t, boggler = get_trie_and_boggler_from_args(args)
 
     w, h = args.size // 10, args.size % 10
+    letters = "acdegilmnoprst" if args.jpa14 else "abcdefghijklmnopqrstuvwxyz"
     if args.variations_on:
         board = args.variations_on
         assert len(board) == w * h
-        boards1 = neighbors(board, A_TO_Z)
-        boards = {bd for n1 in boards1 for bd in neighbors(n1, A_TO_Z)}
+        alphabet = [ord(let) for let in letters]
+        boards1 = neighbors(board, alphabet)
+        boards = {bd for n1 in boards1 for bd in neighbors(n1, alphabet)}
         boards.update(boards1)
         boards.add(board)
         boards = [*boards]
@@ -68,7 +76,7 @@ def main():
         print(f"Read {len(boards)} boards from {args.input_file}")
     else:
         print(f"Generating {n} {w}x{h} boards...")
-        boards = [random_board(w * h) for _ in range(n)]
+        boards = [random_board(w * h, letters) for _ in range(n)]
 
     total_score = 0
     print("Scoring boards...")
