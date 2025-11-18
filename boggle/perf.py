@@ -12,10 +12,8 @@ import argparse
 import random
 import time
 
-from boggle.anneal import A_TO_Z
 from boggle.args import add_standard_args, get_trie_and_boggler_from_args
-from boggle.boggler import LETTER_A
-from boggle.hillclimb import neighbors
+from boggle.constants import A_TO_Z, LETTER_A, neighbors
 
 
 def random_board(n: int) -> str:

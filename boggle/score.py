@@ -7,7 +7,7 @@ import sys
 import time
 
 from boggle.args import add_standard_args, get_trie_and_boggler_from_args
-from boggle.boggler import SCORES
+from boggle.constants import SCORES
 
 
 def main():

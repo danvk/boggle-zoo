@@ -1,12 +1,6 @@
+from boggle.constants import LETTER_A, LETTER_Q, SCORES
 from boggle.neighbors import NEIGHBORS
 from boggle.trie import PyTrie, make_lookup_table
-
-#                  1, 2, 3, 4, 5, 6, 7,  8,     9..25
-SCORES = tuple([0, 0, 0, 1, 1, 2, 3, 5, 11] + [11 for _ in range(9, 26)])
-assert len(SCORES) == 26
-LETTER_A = ord("a")
-LETTER_Q = ord("q") - LETTER_A
-LETTER_Z = ord("z")
 
 
 class PyBoggler:
