@@ -12,17 +12,18 @@
 
 using namespace std;
 
+const uint32_t WORD_MASK = 1u << 31;
+
 // Binary format node using bitfields (8 bytes total)
 struct CompactNode {
-  uint32_t padding : 5;
-  uint32_t child_mask : 26;  // Bitmask for which children exist
-  uint32_t is_word : 1;      // 1 if this node represents a complete word
-  uint16_t first_child;      // Offset to first child
-  uint16_t mark;             // Mark for tracking during searches
+  uint32_t child_mask;
+  uint16_t first_child;  // Offset to first child
+  uint16_t mark;         // Mark for tracking during searches
 
   // Fast operations matching old Trie interface
   bool StartsWord(int i) const { return child_mask & (1 << i); }
-  bool IsWord() const { return is_word; }
+  bool IsWord() const { return child_mask & (1 << 31); }
+
   CompactNode *Descend(int i) {
     uint32_t letter_bit = 1u << i;
     if (!(child_mask & letter_bit)) {
