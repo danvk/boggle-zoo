@@ -2,7 +2,7 @@
 
 import argparse
 
-from cpp_boggle import Trie
+from cpp_boggle import CompactTrie
 
 from boggle.boggler import PyBoggler
 from boggle.dimensional_bogglers import Bogglers
@@ -22,8 +22,8 @@ def add_standard_args(
     parser.add_argument(
         "--dictionary",
         type=str,
-        default="wordlists/enable2k.txt",
-        help="Path to dictionary file with one word per line.",
+        default="wordlists/enable2k.bin",
+        help="Path to dictionary file (.bin for C++, .txt for Python).",
     )
 
     if random_seed:
@@ -43,10 +43,18 @@ def add_standard_args(
 
 def get_trie_from_args(args: argparse.Namespace):
     if args.python:
-        t = make_py_trie(args.dictionary)
+        # Python mode needs .txt dictionary
+        dict_path = args.dictionary
+        if dict_path.endswith(".bin"):
+            dict_path = dict_path.replace(".bin", ".txt")
+        t = make_py_trie(dict_path)
         assert t
     else:
-        t = Trie.create_from_file(args.dictionary)
+        # C++ mode uses CompactTrie with .bin dictionary
+        dict_path = args.dictionary
+        if not dict_path.endswith(".bin"):
+            dict_path = dict_path.replace(".txt", ".bin")
+        t = CompactTrie.create_from_binary_file(dict_path)
         assert t
     return t
 

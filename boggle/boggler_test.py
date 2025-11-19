@@ -1,7 +1,7 @@
 import functools
 
 import pytest
-from cpp_boggle import Trie
+from cpp_boggle import CompactTrie
 from inline_snapshot import snapshot
 
 from boggle.boggler import SCORES, PyBoggler
@@ -16,7 +16,7 @@ def get_py_trie():
 
 @functools.cache
 def get_cpp_trie():
-    return Trie.create_from_file("wordlists/enable2k.txt")
+    return CompactTrie.create_from_binary_file("wordlists/enable2k.bin")
 
 
 PARAMS = [

@@ -3,6 +3,8 @@ import time
 from collections import deque
 from typing import Iterable, Self
 
+from boggle.trie import bogglify_word
+
 LETTER_A = ord("a")
 
 
@@ -538,6 +540,9 @@ def main():
     args = parser.parse_args()
 
     words = [line.strip() for line in open(args.input_file)]
+    # Filter and bogglify words (remove words < 3 chars, replace "qu" with "q")
+    words = [bogglify_word(word) for word in words]
+    words = [word for word in words if word is not None]
     words.sort()
     trie = build_trie(words)
     # trie.set_tracking()

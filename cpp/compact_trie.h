@@ -36,7 +36,7 @@ class CompactTrie {
   bool IsWord() const { return nodes_[node_idx_].is_word != 0; }
   void SetIsWord() { /* Not supported for mmap'd data */ }
   void SetWordId(uint32_t word_id) { /* Not supported */ }
-  uint32_t WordId() const { return 0; /* Not implemented */ }
+  uint32_t WordId() const { return static_cast<uint32_t>(node_idx_); }
 
   void Mark(uintptr_t m);
   uintptr_t Mark();
