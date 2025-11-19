@@ -1,21 +1,21 @@
 from cpp_boggle import (
-    CompactBoggler22,
-    CompactBoggler23,
-    CompactBoggler33,
-    CompactBoggler34,
-    CompactBoggler44,
-    CompactBoggler45,
-    CompactBoggler55,
+    Boggler22,
+    Boggler23,
+    Boggler33,
+    Boggler34,
+    Boggler44,
+    Boggler45,
+    Boggler55,
 )
 
 Bogglers = {
-    (2, 2): CompactBoggler22,
-    (2, 3): CompactBoggler23,
-    (3, 3): CompactBoggler33,
-    (3, 4): CompactBoggler34,
-    (4, 4): CompactBoggler44,
-    (4, 5): CompactBoggler45,
-    (5, 5): CompactBoggler55,
+    (2, 2): Boggler22,
+    (2, 3): Boggler23,
+    (3, 3): Boggler33,
+    (3, 4): Boggler34,
+    (4, 4): Boggler44,
+    (4, 5): Boggler45,
+    (5, 5): Boggler55,
 }
 
 

@@ -45,15 +45,13 @@ def get_trie_from_args(args: argparse.Namespace):
     if args.python:
         # Python mode needs .txt dictionary
         dict_path = args.dictionary
-        if dict_path.endswith(".bin"):
-            dict_path = dict_path.replace(".bin", ".txt")
+        assert dict_path.endswith(".txt")
         t = make_py_trie(dict_path)
         assert t
     else:
         # C++ mode uses CompactTrie with .bin dictionary
         dict_path = args.dictionary
-        if not dict_path.endswith(".bin"):
-            dict_path = dict_path.replace(".txt", ".bin")
+        assert dict_path.endswith(".bin")
         t = CompactTrie.create_from_binary_file(dict_path)
         assert t
     return t

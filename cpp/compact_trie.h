@@ -24,7 +24,7 @@ struct CompactNode {
   bool IsWord() const { return is_word; }
   CompactNode *Descend(int i) {
     uint32_t letter_bit = 1u << i;
-    if (!child_mask & letter_bit) {
+    if (!(child_mask & letter_bit)) {
       return nullptr;
     }
     uint32_t mask_before = child_mask & (letter_bit - 1);
