@@ -475,27 +475,41 @@ def build_trie(words: Iterable[str]):
 def write_binary_dict(nodes: list[CompactNode], output_file: str):
     """Write CompactNode list to binary file for C++ mmap.
 
-    Binary format:
-    - Array of Node structs (12 bytes each):
-      - uint32_t child_mask (4 bytes)
-      - int32_t first_child (4 bytes)
-      - uint8_t is_word (1 byte)
-      - uint8_t padding[3] (3 bytes)
+    Binary format using bitfields (8 bytes per node):
+    struct CompactNode {
+      uint64_t child_mask : 26;   // Bitmask for which children exist
+      uint64_t is_word : 1;       // 1 if this node represents a complete word
+      uint64_t first_child : 21;  // Index of first child (-1 if no children)
+      uint64_t mark : 16;         // Mark for tracking during searches
+    };
     """
-    import struct
+    import ctypes
+
+    class CompactNodeBinary(ctypes.Structure):
+        _fields_ = [
+            ("child_mask", ctypes.c_uint64, 26),
+            ("is_word", ctypes.c_uint64, 1),
+            ("first_child", ctypes.c_uint64, 21),
+            ("mark", ctypes.c_uint64, 16),
+        ]
 
     with open(output_file, "wb") as f:
         for node in nodes:
-            # Pack: child_mask (I), first_child (i), is_word (B), padding (3x)
-            data = struct.pack(
-                "IiB3x",
-                node.child_mask_ & 0xFFFFFFFF,  # Ensure 32-bit
-                node.first_child_ if node.first_child_ else -1,  # -1 for no children
-                1 if node.is_word_ else 0,
+            # Handle -1 for first_child (means no children)
+            # With 21 bits unsigned, -1 becomes 0x1FFFFF (2^21 - 1)
+            first_child = (
+                node.first_child_ if node.first_child_ >= 0 else (1 << 21) - 1
             )
-            f.write(data)
 
-    print(f"Wrote {len(nodes)} nodes to {output_file} ({len(nodes) * 12} bytes)")
+            binary_node = CompactNodeBinary(
+                child_mask=node.child_mask_ & 0x3FFFFFF,  # 26 bits
+                is_word=1 if node.is_word_ else 0,  # 1 bit
+                first_child=first_child & 0x1FFFFF,  # 21 bits
+                mark=0,  # 16 bits, initially 0
+            )
+            f.write(bytes(binary_node))
+
+    print(f"Wrote {len(nodes)} nodes to {output_file} ({len(nodes) * 8} bytes)")
 
 
 def main():

@@ -15,12 +15,12 @@ using namespace std;
 const int kNumLetters_CT = 26;
 const int kQ_CT = 'q' - 'a';
 
-// Binary format node matching Python CompactNode
+// Binary format node using bitfields (8 bytes total)
 struct CompactNode {
-  uint32_t child_mask;  // Bitmask for which children exist (26 bits)
-  int32_t first_child;  // Index of first child in nodes array (-1 if no children)
-  uint8_t is_word;      // 1 if this node represents a complete word
-  uint8_t padding[3];   // Padding for alignment
+  uint64_t child_mask : 26;   // Bitmask for which children exist
+  uint64_t is_word : 1;       // 1 if this node represents a complete word
+  uint64_t first_child : 21;  // Index of first child (-1 if no children)
+  uint64_t mark : 16;         // Mark for tracking during searches
 };
 
 // Trie-like interface backed by mmap'd CompactNode array
@@ -59,11 +59,6 @@ class CompactTrie {
   // For memory management
   size_t file_size_;
   int fd_;
-
-  // Mark storage (word index -> mark value)
-  // Shared across all CompactTrie views via static
-  static unordered_map<size_t, uintptr_t>* marks_;
-  static void InitMarks();
 
   // Cache for Descend() calls
   mutable CompactTrie* children_cache_[26];

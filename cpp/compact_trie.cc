@@ -9,15 +9,6 @@
 
 using namespace std;
 
-// Static mark storage shared across all CompactTrie instances
-unordered_map<size_t, uintptr_t>* CompactTrie::marks_ = nullptr;
-
-void CompactTrie::InitMarks() {
-  if (!marks_) {
-    marks_ = new unordered_map<size_t, uintptr_t>();
-  }
-}
-
 CompactTrie::CompactTrie(CompactNode* nodes, size_t num_nodes, size_t node_idx)
     : nodes_(nodes),
       num_nodes_(num_nodes),
@@ -25,7 +16,6 @@ CompactTrie::CompactTrie(CompactNode* nodes, size_t num_nodes, size_t node_idx)
       owns_memory_(false),
       file_size_(0),
       fd_(-1) {
-  InitMarks();
   for (int i = 0; i < 26; i++) {
     children_cache_[i] = nullptr;
   }
@@ -93,15 +83,11 @@ CompactTrie* CompactTrie::Descend(int letter_idx) const {
 }
 
 void CompactTrie::Mark(uintptr_t m) {
-  (*marks_)[node_idx_] = m;
+  nodes_[node_idx_].mark = static_cast<uint64_t>(m & 0xFFFF);
 }
 
 uintptr_t CompactTrie::Mark() {
-  auto it = marks_->find(node_idx_);
-  if (it != marks_->end()) {
-    return it->second;
-  }
-  return 0;
+  return nodes_[node_idx_].mark;
 }
 
 unique_ptr<CompactTrie> CompactTrie::CreateFromBinaryFile(const char* filename) {
@@ -139,8 +125,8 @@ unique_ptr<CompactTrie> CompactTrie::CreateFromBinaryFile(const char* filename) 
     return nullptr;
   }
 
-  // mmap the file
-  void* mapped = mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
+  // mmap the file with PROT_WRITE for copy-on-write mark updates
+  void* mapped = mmap(nullptr, file_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
   if (mapped == MAP_FAILED) {
     fprintf(stderr, "Failed to mmap binary dictionary: %s\n", filename);
     close(fd);
