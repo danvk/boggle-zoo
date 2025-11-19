@@ -495,9 +495,14 @@ def write_binary_dict(nodes: list[CompactNode], output_file: str):
             ("mark", ctypes.c_uint64, 16),
         ]
 
+    max_offset = 0
     with open(output_file, "wb") as f:
         for i, node in enumerate(nodes):
-            child_offset = node.first_child - i
+            child_offset = 0
+            if node.child_mask_:
+                child_offset = node.first_child_ - i
+                assert 0 < child_offset < 2**21, child_offset
+                max_offset = max(child_offset, max_offset)
             binary_node = CompactNodeBinary(
                 child_mask=node.child_mask_ & 0x3FFFFFF,  # 26 bits
                 is_word=1 if node.is_word_ else 0,  # 1 bit
@@ -506,7 +511,9 @@ def write_binary_dict(nodes: list[CompactNode], output_file: str):
             )
             f.write(bytes(binary_node))
 
-    print(f"Wrote {len(nodes)} nodes to {output_file} ({len(nodes) * 8} bytes)")
+    print(
+        f"Wrote {len(nodes)} nodes to {output_file} ({len(nodes) * 8} bytes); {max_offset=}"
+    )
 
 
 def main():
