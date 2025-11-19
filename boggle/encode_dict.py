@@ -489,10 +489,11 @@ def write_binary_dict(nodes: list[CompactNode], output_file: str):
 
     class CompactNodeBinary(ctypes.Structure):
         _fields_ = [
-            ("child_mask", ctypes.c_uint64, 26),
-            ("is_word", ctypes.c_uint64, 1),
-            ("first_child", ctypes.c_uint64, 21),
-            ("mark", ctypes.c_uint64, 16),
+            ("padding", ctypes.c_uint32, 5),
+            ("child_mask", ctypes.c_uint32, 26),
+            ("is_word", ctypes.c_uint32, 1),
+            ("first_child", ctypes.c_uint16, 16),
+            ("mark", ctypes.c_uint16, 16),
         ]
 
     max_offset = 0
@@ -501,7 +502,7 @@ def write_binary_dict(nodes: list[CompactNode], output_file: str):
             child_offset = 0
             if node.child_mask_:
                 child_offset = node.first_child_ - i
-                assert 0 < child_offset < 2**21, child_offset
+                assert 0 < child_offset < 2**16, child_offset
                 max_offset = max(child_offset, max_offset)
             binary_node = CompactNodeBinary(
                 child_mask=node.child_mask_ & 0x3FFFFFF,  # 26 bits
