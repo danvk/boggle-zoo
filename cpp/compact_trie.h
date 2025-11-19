@@ -12,8 +12,6 @@
 
 using namespace std;
 
-const uint32_t WORD_MASK = 1u << 31;
-
 // Binary format node using bitfields (8 bytes total)
 struct CompactNode {
   uint32_t child_mask;
