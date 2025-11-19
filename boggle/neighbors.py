@@ -1,3 +1,6 @@
+from typing import Sequence
+
+
 def init_neighbors(w: int, h: int):
     def idx(x: int, y: int):
         return h * x + y
@@ -42,3 +45,36 @@ NEIGHBORS = {
     (4, 5): NEIGHBORS45,
     (5, 5): NEIGHBORS55,
 }
+
+
+def board_neighbors(board: str, valid_letters: Sequence[int]):
+    """Find all boards within a distance of 1 of this one.
+
+    This includes:
+    - Changing any one cell to another letter.
+    - Swapping any two cells.
+    """
+    out = set()
+    out.add(board)
+
+    # single letter changes
+    for i, c in enumerate(board):
+        current = ord(c)
+        prefix = board[:i]
+        suffix = board[i + 1 :]
+        for j in valid_letters:
+            if j == current:
+                continue
+            n = prefix + chr(j) + suffix
+            out.add(n)
+
+    # letter swaps
+    for i in range(len(board) - 1):
+        prefix = board[:i]
+        ci = board[i]
+        for j in range(i + 1, len(board)):
+            cj = board[j]
+            n = prefix + cj + board[i + 1 : j] + ci + board[j + 1 :]
+            out.add(n)
+
+    return out

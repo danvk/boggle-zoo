@@ -14,7 +14,7 @@ import time
 from typing import Sequence
 
 from boggle.args import add_standard_args, get_trie_and_boggler_from_args
-from boggle.constants import A_TO_Z, neighbors
+from boggle.neighbors import board_neighbors
 
 
 def random_board(n: int, letters: Sequence[str]) -> str:
@@ -63,8 +63,8 @@ def main():
         board = args.variations_on
         assert len(board) == w * h
         alphabet = [ord(let) for let in letters]
-        boards1 = neighbors(board, alphabet)
-        boards = {bd for n1 in boards1 for bd in neighbors(n1, alphabet)}
+        boards1 = board_neighbors(board, alphabet)
+        boards = {bd for n1 in boards1 for bd in board_neighbors(n1, alphabet)}
         boards.update(boards1)
         boards.add(board)
         boards = [*boards]
