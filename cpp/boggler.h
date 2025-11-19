@@ -9,10 +9,10 @@
 #include "neighbors.h"
 #include "trie.h"
 
-template <int M, int N, typename Dict = Trie>
+template <int M, int N>
 class Boggler {
  public:
-  Boggler(Dict* t) : dict_(t), runs_(0) {
+  Boggler(CompactTrie* t) : dict_(t->GetRoot()), runs_(0) {
     static_assert(
         sizeof(kWordScores) / sizeof(kWordScores[0]) - 1 >= M * N,
         "kWordScores must have at least M * N + 1 elements"
@@ -32,14 +32,12 @@ class Boggler {
   vector<vector<int>> FindWords(const string& lets, bool multiboggle);
 
  private:
-  void DoDFS(unsigned int i, unsigned int len, Dict* t);
-  void FindWordsDFS(
-      unsigned int i, Dict* t, bool multiboggle, vector<vector<int>>& out
-  );
+  void DoDFS(unsigned int i, unsigned int len, CompactNode* t);
+  void FindWordsDFS(unsigned int i* t, bool multiboggle, vector<vector<int>>& out);
   unsigned int InternalScore();
   bool ParseBoard(const char* bd);
 
-  Dict* dict_;
+  CompactNode* dict_;
   unsigned int used_;
   int bd_[M * N];
   unsigned int score_;
@@ -48,26 +46,26 @@ class Boggler {
   unordered_set<uint64_t> found_words_;
 };
 
-template <int M, int N, typename Dict>
-void Boggler<M, N, Dict>::SetCell(int x, int y, unsigned int c) {
+template <int M, int N>
+void Boggler<M, N>::SetCell(int x, int y, unsigned int c) {
   bd_[(x * N) + y] = c;
 }
 
-template <int M, int N, typename Dict>
-unsigned int Boggler<M, N, Dict>::Cell(int x, int y) const {
+template <int M, int N>
+unsigned int Boggler<M, N>::Cell(int x, int y) const {
   return bd_[(x * N) + y];
 }
 
-template <int M, int N, typename Dict>
-int Boggler<M, N, Dict>::Score(const char* lets) {
+template <int M, int N>
+int Boggler<M, N>::Score(const char* lets) {
   if (!ParseBoard(lets)) {
     return -1;
   }
   return InternalScore();
 }
 
-template <int M, int N, typename Dict>
-bool Boggler<M, N, Dict>::ParseBoard(const char* bd) {
+template <int M, int N>
+bool Boggler<M, N>::ParseBoard(const char* bd) {
   unsigned int expected_len = M * N;
   if (strlen(bd) != expected_len) {
     fprintf(
@@ -97,15 +95,15 @@ bool Boggler<M, N, Dict>::ParseBoard(const char* bd) {
   return true;
 }
 
-template <int M, int N, typename Dict>
-unsigned int Boggler<M, N, Dict>::InternalScore() {
+template <int M, int N>
+unsigned int Boggler<M, N>::InternalScore() {
   runs_ = dict_->Mark() + 1;
   dict_->Mark(runs_);
   used_ = 0;
   score_ = 0;
   for (int i = 0; i < M * N; i++) {
     int c = bd_[i];
-    if (dict_->StartsWord(c)) DoDFS(i, 0, dict_->Descend(c));
+    if (dict_->StartsWord(c)) DoDFS(i, 0_->Descend(c));
   }
   return score_;
 }
@@ -141,7 +139,7 @@ unsigned int Boggler<M, N, Dict>::InternalScore() {
   len += (c == kQ ? 2 : 1);       \
   if (t->IsWord()) {              \
     if (t->Mark() != runs_) {     \
-      t->Mark(runs_);             \
+      t->SetMark(runs_);          \
       score_ += kWordScores[len]; \
     }                             \
   }
@@ -481,8 +479,8 @@ void Boggler<5, 5, CompactTrie>::DoDFS(unsigned int i, unsigned int len, Compact
 #undef PREFIX
 #undef SUFFIX
 
-template <int M, int N, typename Dict>
-vector<vector<int>> Boggler<M, N, Dict>::FindWords(const string& lets, bool multiboggle) {
+template <int M, int N>
+vector<vector<int>> Boggler<M, N>::FindWords(const string& lets, bool multiboggle) {
   found_words_.clear();
   seq_.clear();
   seq_.reserve(M * N);
@@ -499,16 +497,16 @@ vector<vector<int>> Boggler<M, N, Dict>::FindWords(const string& lets, bool mult
   for (int i = 0; i < M * N; i++) {
     int c = bd_[i];
     if (c != -1 && dict_->StartsWord(c)) {
-      FindWordsDFS(i, dict_->Descend(c), multiboggle, out);
+      FindWordsDFS(i_->Descend(c), multiboggle, out);
     }
   }
   return out;
 }
 
 // This could be specialized, but it's not as performance-sensitive as DoDFS()
-template <int M, int N, typename Dict>
-void Boggler<M, N, Dict>::FindWordsDFS(
-    unsigned int i, Dict* t, bool multiboggle, vector<vector<int>>& out
+template <int M, int N>
+void Boggler<M, N>::FindWordsDFS(
+    unsigned int i* t, bool multiboggle, vector<vector<int>>& out
 ) {
   used_ ^= (1 << i);
   seq_.push_back(i);

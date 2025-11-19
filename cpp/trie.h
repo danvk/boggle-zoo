@@ -14,17 +14,8 @@ using namespace std;
 const int kNumLetters = 26;
 const int kQ = 'q' - 'a';
 
-struct Node
-{
-  unsigned int child_mask : 26;
-  unsigned int is_word : 1;
-  unsigned int first_child : 21;
-  unsigned int mark : 16;
-};
-
-class Trie
-{
-public:
+class Trie {
+ public:
   Trie();
   ~Trie();
 
@@ -37,7 +28,7 @@ public:
   void SetWordId(uint32_t word_id) { word_id_ = word_id; }
   uint32_t WordId() const { return word_id_; }
 
-  void Mark(uintptr_t m) { mark_ = m; }
+  void SetMark(uintptr_t m) { mark_ = m; }
   uintptr_t Mark() { return mark_; }
 
   // Trie construction
@@ -63,7 +54,7 @@ public:
   static bool BogglifyWord(char *word);
   static bool IsBoggleWord(const char *word);
 
-private:
+ private:
   bool is_word_;
   uintptr_t mark_;
   Trie *children_[26];

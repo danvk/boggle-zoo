@@ -496,17 +496,12 @@ def write_binary_dict(nodes: list[CompactNode], output_file: str):
         ]
 
     with open(output_file, "wb") as f:
-        for node in nodes:
-            # Handle -1 for first_child (means no children)
-            # With 21 bits unsigned, -1 becomes 0x1FFFFF (2^21 - 1)
-            first_child = (
-                node.first_child_ if node.first_child_ >= 0 else (1 << 21) - 1
-            )
-
+        for i, node in enumerate(nodes):
+            child_offset = node.first_child - i
             binary_node = CompactNodeBinary(
                 child_mask=node.child_mask_ & 0x3FFFFFF,  # 26 bits
                 is_word=1 if node.is_word_ else 0,  # 1 bit
-                first_child=first_child & 0x1FFFFF,  # 21 bits
+                first_child=child_offset & 0x1FFFFF,  # 21 bits
                 mark=0,  # 16 bits, initially 0
             )
             f.write(bytes(binary_node))

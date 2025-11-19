@@ -56,21 +56,15 @@ PYBIND11_MODULE(cpp_boggle, m) {
       .def_static("create_from_wordlist", &Trie::CreateFromWordlist);
 
   py::class_<CompactTrie>(m, "CompactTrie")
-      .def("starts_word", &CompactTrie::StartsWord)
-      .def("descend", &CompactTrie::Descend, py::return_value_policy::reference)
-      .def("is_word", &CompactTrie::IsWord)
-      .def("mark", py::overload_cast<>(&CompactTrie::Mark))
-      .def("set_mark", py::overload_cast<uintptr_t>(&CompactTrie::Mark))
-      .def("num_nodes", &CompactTrie::NumNodes)
+      .def("get_root", &CompactTrie::GetRoot)
       .def_static("create_from_binary_file", &CompactTrie::CreateFromBinaryFile);
 
-  declare_boggler<2, 2>(m, "Boggler22");
-  declare_boggler<2, 3>(m, "Boggler23");
-  declare_boggler<3, 3>(m, "Boggler33");
-  declare_boggler<3, 4>(m, "Boggler34");
-  declare_boggler<4, 4>(m, "Boggler44");
-  declare_boggler<4, 5>(m, "Boggler45");
-  declare_boggler<5, 5>(m, "Boggler55");
+  py::class_<CompactNode>(m, "CompactNode")
+      .def("starts_word", &CompactNode::StartsWord)
+      .def("descend", &CompactNode::Descend, py::return_value_policy::reference)
+      .def("is_word", &CompactNode::IsWord)
+      .def("mark", py::overload_cast<>(&CompactNode::Mark))
+      .def("set_mark", py::overload_cast<uintptr_t>(&CompactNode::SetMark));
 
   declare_compact_boggler<2, 2>(m, "CompactBoggler22");
   declare_compact_boggler<2, 3>(m, "CompactBoggler23");
