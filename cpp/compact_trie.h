@@ -15,22 +15,21 @@ using namespace std;
 // Binary format node using bitfields (8 bytes total)
 struct CompactNode {
   uint32_t child_mask;
-  uint16_t first_child;  // Offset to first child
-  uint16_t mark;         // Mark for tracking during searches
+  uint16_t mark;        // Mark for tracking during searches
+  uint16_t children[];  // Child indices
 
   // Fast operations matching old Trie interface
   bool StartsWord(int i) const { return child_mask & (1 << i); }
   bool IsWord() const { return child_mask & (1 << 31); }
 
-  CompactNode *Descend(int i) {
+  uint16_t Descend(int i) {
     uint32_t letter_bit = 1u << i;
     if (!(child_mask & letter_bit)) {
-      return nullptr;
+      return 0;
     }
     uint32_t mask_before = child_mask & (letter_bit - 1);
-    int child_offset = std::popcount(mask_before);
-    CompactNode *child = this + first_child + child_offset;
-    return child;
+    int child_index = std::popcount(mask_before);
+    return children[child_index];
   };
 
   void SetMark(uintptr_t m) { mark = m; }

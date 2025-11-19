@@ -89,7 +89,9 @@
         "cassert": "cpp",
         "chrono": "cpp",
         "compare": "cpp",
-        "version": "cpp"
+        "version": "cpp",
+        "iomanip": "cpp",
+        "span": "cpp"
     },
     "python.testing.pytestArgs": [
         "boggle"

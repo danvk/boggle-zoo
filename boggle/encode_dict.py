@@ -292,8 +292,16 @@ def compact_trie(root: Node) -> list[CompactNode]:
             q.append(child)
 
     # Make sure we've converted everything.
-    for node in nodes:
+    max_delta = 0
+    min_delta = 0
+    for i, node in enumerate(nodes):
+        for child in node.children_:
+            delta = child - i
+            min_delta = min(min_delta, delta)
+            max_delta = max(max_delta, delta)
         assert node
+
+    print(f"{min_delta=}, {max_delta=}")
 
     return nodes
 
@@ -306,43 +314,33 @@ def build_trie(words: Iterable[str]):
 
 
 def write_binary_dict(nodes: list[CompactNode], output_file: str):
-    """Write CompactNode list to binary file for C++ mmap.
-
-    Binary format using bitfields (8 bytes per node):
-    struct CompactNode {
-      uint64_t child_mask : 26;   // Bitmask for which children exist
-      uint64_t is_word : 1;       // 1 if this node represents a complete word
-      uint64_t first_child : 21;  // Index of first child (-1 if no children)
-      uint64_t mark : 16;         // Mark for tracking during searches
-    };
-    """
+    """Write CompactNode list to binary file for C++ mmap."""
     import ctypes
 
     class CompactNodeBinary(ctypes.Structure):
         _fields_ = [
             ("child_mask", ctypes.c_uint32, 32),
-            ("first_child", ctypes.c_uint16, 16),
             ("mark", ctypes.c_uint16, 16),
         ]
 
+    class ChildIndex(ctypes.Structure):
+        _fields_ = [("child", ctypes.c_uint16, 16)]
+
+    # TODO: need to consider the variable-size structure for offsets
     max_offset = 0
     with open(output_file, "wb") as f:
         for i, node in enumerate(nodes):
-            child_offset = 0
-            if node.child_mask_:
-                child_offset = node.first_child_ - i
-                assert 0 < child_offset < 2**16, child_offset
-                max_offset = max(child_offset, max_offset)
             child_mask = node.child_mask_
             if node.is_word_:
                 child_mask += 1 << 31
             assert 0 <= child_mask < 2**32
             binary_node = CompactNodeBinary(
                 child_mask=child_mask,
-                first_child=child_offset,
                 mark=0,
             )
             f.write(bytes(binary_node))
+            for child in node.children_:
+                f.write(bytes(ChildIndex))
 
     print(
         f"Wrote {len(nodes)} nodes to {output_file} ({len(nodes) * 8} bytes); {max_offset=}"
