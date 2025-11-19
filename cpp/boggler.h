@@ -109,14 +109,15 @@ unsigned int Boggler<M, N>::InternalScore() {
   return score_;
 }
 
-#define REC(idx)                         \
-  do {                                   \
-    if ((used_ & (1 << idx)) == 0) {     \
-      cc = bd_[idx];                     \
-      if (t->StartsWord(cc)) {           \
-        DoDFS(idx, len, t->Descend(cc)); \
-      }                                  \
-    }                                    \
+#define REC(idx)                     \
+  do {                               \
+    if ((used_ & (1 << idx)) == 0) { \
+      cc = bd_[idx];                 \
+      auto tc = t->Descend(cc);      \
+      if (tc) {                      \
+        DoDFS(idx, len, tc);         \
+      }                              \
+    }                                \
   } while (0)
 
 #define REC3(a, b, c) \
