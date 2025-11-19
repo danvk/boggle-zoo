@@ -1,7 +1,7 @@
+#!/usr/bin/env python
 import time
 from collections import deque
 from typing import Iterable, Self
-
 
 LETTER_A = ord("a")
 
@@ -494,7 +494,7 @@ def main():
     words = [line.strip() for line in open(args.input_file)]
     words.sort()
     trie = build_trie(words)
-    trie.set_tracking()
+    # trie.set_tracking()
 
     if args.dawg:
         trie = trie.to_dawg()
@@ -511,18 +511,18 @@ def main():
     compact_nodes = compact_trie(trie)
     end_s = time.time()
     print(f"Compact trie: {end_s - start_s} s")
-    compact_dawg = CompactNode.to_dawg(compact_nodes)
-    print(f"Compact {len(compact_nodes)} -> {len(compact_dawg)}")
+    # compact_dawg = CompactNode.to_dawg(compact_nodes)
+    # print(f"Compact {len(compact_nodes)} -> {len(compact_dawg)}")
 
     if args.check_index:
-        compact_root = compact_dawg[0]
+        compact_root = compact_nodes[0]
         for idx, word in enumerate(words):
             assert trie.is_word(word)
             calc_idx = trie.get_word_index(word)
             calc_idx_tracking = trie.get_word_index_tracking(word)
             assert calc_idx == idx, f"{word} {calc_idx} != {idx}"
             assert calc_idx_tracking == idx, f"{word} {calc_idx_tracking} != {idx}"
-            calc_idx_dawg = compact_root.get_word_index(compact_dawg, word)
+            calc_idx_dawg = compact_root.get_word_index(compact_nodes, word)
             assert calc_idx_dawg == idx, f"{word} {calc_idx_dawg} != {idx}"
 
 
