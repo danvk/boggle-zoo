@@ -24,7 +24,7 @@ CXXFLAGS := -Wall -std=c++20 -fPIC -march=native \
             -Wno-sign-compare -Wshadow -Werror -O3
 
 # Source files
-SOURCES := cpp/cpp_boggle.cc cpp/trie.cc
+SOURCES := cpp/cpp_boggle.cc cpp/trie.cc cpp/compact_trie.cc
 HEADERS := $(wildcard cpp/*.h)
 
 # Default target

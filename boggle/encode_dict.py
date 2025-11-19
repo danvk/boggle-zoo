@@ -472,6 +472,32 @@ def build_trie(words: Iterable[str]):
     return root
 
 
+def write_binary_dict(nodes: list[CompactNode], output_file: str):
+    """Write CompactNode list to binary file for C++ mmap.
+
+    Binary format:
+    - Array of Node structs (12 bytes each):
+      - uint32_t child_mask (4 bytes)
+      - int32_t first_child (4 bytes)
+      - uint8_t is_word (1 byte)
+      - uint8_t padding[3] (3 bytes)
+    """
+    import struct
+
+    with open(output_file, "wb") as f:
+        for node in nodes:
+            # Pack: child_mask (I), first_child (i), is_word (B), padding (3x)
+            data = struct.pack(
+                "IiB3x",
+                node.child_mask_ & 0xFFFFFFFF,  # Ensure 32-bit
+                node.first_child_ if node.first_child_ else -1,  # -1 for no children
+                1 if node.is_word_ else 0,
+            )
+            f.write(data)
+
+    print(f"Wrote {len(nodes)} nodes to {output_file} ({len(nodes) * 12} bytes)")
+
+
 def main():
     import argparse
 
@@ -487,6 +513,12 @@ def main():
     )
     parser.add_argument(
         "--check_index", action="store_true", help="Verify tracking index for all words"
+    )
+    parser.add_argument(
+        "--binary",
+        "-b",
+        metavar="OUTPUT",
+        help="Write binary dictionary file for C++ mmap",
     )
 
     args = parser.parse_args()
@@ -513,6 +545,9 @@ def main():
     print(f"Compact trie: {end_s - start_s} s")
     # compact_dawg = CompactNode.to_dawg(compact_nodes)
     # print(f"Compact {len(compact_nodes)} -> {len(compact_dawg)}")
+
+    if args.binary:
+        write_binary_dict(compact_nodes, args.binary)
 
     if args.check_index:
         compact_root = compact_nodes[0]

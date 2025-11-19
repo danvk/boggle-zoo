@@ -14,14 +14,23 @@ using namespace std;
 const int kNumLetters = 26;
 const int kQ = 'q' - 'a';
 
-class Trie {
- public:
+struct Node
+{
+  unsigned int child_mask : 26;
+  unsigned int is_word : 1;
+  unsigned int first_child : 21;
+  unsigned int mark : 16;
+};
+
+class Trie
+{
+public:
   Trie();
   ~Trie();
 
   // Fast operations
   bool StartsWord(int i) const { return children_[i]; }
-  Trie* Descend(int i) const { return children_[i]; }
+  Trie *Descend(int i) const { return children_[i]; }
 
   bool IsWord() const { return is_word_; }
   void SetIsWord() { is_word_ = true; }
@@ -33,31 +42,31 @@ class Trie {
 
   // Trie construction
   // Returns a pointer to the new Trie node at the end of the word.
-  Trie* AddWord(const char* wd);
-  static unique_ptr<Trie> CreateFromFile(const char* filename);
-  static unique_ptr<Trie> CreateFromFileStr(const string& filename);
-  static unique_ptr<Trie> CreateFromWordlist(const vector<string>& words);
+  Trie *AddWord(const char *wd);
+  static unique_ptr<Trie> CreateFromFile(const char *filename);
+  static unique_ptr<Trie> CreateFromFileStr(const string &filename);
+  static unique_ptr<Trie> CreateFromWordlist(const vector<string> &words);
 
   // Some slower methods that operate on the entire Trie (not just a node).
   size_t Size();
   size_t NumNodes();
   void SetAllMarks(unsigned mark);
   void ResetMarks();
-  Trie* FindWord(const char* wd);
-  Trie* FindWordId(int word_id);
+  Trie *FindWord(const char *wd);
+  Trie *FindWordId(int word_id);
 
-  static bool ReverseLookup(const Trie* base, const Trie* child, string* out);
-  static string ReverseLookup(const Trie* base, const Trie* child);
+  static bool ReverseLookup(const Trie *base, const Trie *child, string *out);
+  static string ReverseLookup(const Trie *base, const Trie *child);
 
   // Replaces "qu" with "q" in-place; returns true if the word is a valid boggle word
   // (IsBoggleWord).
-  static bool BogglifyWord(char* word);
-  static bool IsBoggleWord(const char* word);
+  static bool BogglifyWord(char *word);
+  static bool IsBoggleWord(const char *word);
 
- private:
+private:
   bool is_word_;
   uintptr_t mark_;
-  Trie* children_[26];
+  Trie *children_[26];
   uint32_t word_id_;
 };
 
