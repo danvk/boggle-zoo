@@ -315,35 +315,42 @@ def build_trie(words: Iterable[str]):
 
 def write_binary_dict(nodes: list[CompactNode], output_file: str):
     """Write CompactNode list to binary file for C++ mmap."""
+
     import ctypes
+    import struct
 
-    class CompactNodeBinary(ctypes.Structure):
-        _fields_ = [
-            ("child_mask", ctypes.c_uint32, 32),
-            ("mark", ctypes.c_uint16, 16),
-        ]
+    # Pass 1: construct an (implicit) array of nodes with gaps for children.
+    n = 0
+    node_to_index = dict[CompactNode, int]()
+    for node in nodes:
+        node_to_index[node] = n
+        n += 1
+        n += len(node.children_)
+    num_slots = n
 
-    class ChildIndex(ctypes.Structure):
-        _fields_ = [("child", ctypes.c_uint16, 16)]
-
-    # TODO: need to consider the variable-size structure for offsets
-    max_offset = 0
+    # Pass 2: fill in the bytes
+    n = 0
+    min_delta = max_delta = 0
     with open(output_file, "wb") as f:
-        for i, node in enumerate(nodes):
+        for node in nodes:
+            node_idx = n
             child_mask = node.child_mask_
             if node.is_word_:
                 child_mask += 1 << 31
-            assert 0 <= child_mask < 2**32
-            binary_node = CompactNodeBinary(
-                child_mask=child_mask,
-                mark=0,
-            )
-            f.write(bytes(binary_node))
-            for child in node.children_:
-                f.write(bytes(ChildIndex))
+            f.write(struct.pack("I", child_mask))  # I = 32-bit unsigned
+            n += 1
+            for child in node.get_children(nodes):
+                child_idx = node_to_index[child]
+                delta = child_idx - node_idx
+                min_delta = min(delta, min_delta)
+                max_delta = max(delta, max_delta)
+                f.write(struct.pack("i", delta))  # i = 32-bit signed
+                n += 1
+
+    assert n == num_slots
 
     print(
-        f"Wrote {len(nodes)} nodes to {output_file} ({len(nodes) * 8} bytes); {max_offset=}"
+        f"Wrote {num_slots} words to {output_file} ({num_slots * 4} bytes); {min_delta=} {max_delta=}"
     )
 
 
