@@ -12,28 +12,25 @@
 
 using namespace std;
 
-// Binary format node using bitfields (8 bytes total)
+// Binary format node
 struct CompactNode {
   uint32_t child_mask;
-  uint16_t mark;        // Mark for tracking during searches
-  uint16_t children[];  // Child indices
+  int32_t children[];  // Child indices
 
   // Fast operations matching old Trie interface
   bool StartsWord(int i) const { return child_mask & (1 << i); }
   bool IsWord() const { return child_mask & (1 << 31); }
 
-  uint16_t Descend(int i) {
+  CompactNode *Descend(int i) {
     uint32_t letter_bit = 1u << i;
     if (!(child_mask & letter_bit)) {
-      return 0;
+      return nullptr;
     }
     uint32_t mask_before = child_mask & (letter_bit - 1);
     int child_index = std::popcount(mask_before);
-    return children[child_index];
+    auto child_offset = children[child_index];
+    return this + child_offset;
   };
-
-  void SetMark(uintptr_t m) { mark = m; }
-  uintptr_t Mark() { return mark; }
 };
 
 // Trie-like interface backed by mmap'd CompactNode array
@@ -47,15 +44,11 @@ class CompactTrie {
   // Loading from binary file
   static unique_ptr<CompactTrie> CreateFromBinaryFile(const char *filename);
 
-  // Stats
-  size_t NumNodes() const { return num_nodes_; }
-
   // Cleanup
   ~CompactTrie();
 
  private:
   CompactNode *nodes_;  // mmap'd array of nodes (owned by root only)
-  size_t num_nodes_;    // Total number of nodes
 
   // For memory management
   size_t file_size_;

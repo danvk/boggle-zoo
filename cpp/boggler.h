@@ -98,8 +98,6 @@ bool Boggler<M, N>::ParseBoard(const char* bd) {
 
 template <int M, int N>
 unsigned int Boggler<M, N>::InternalScore() {
-  runs_ = dict_->Mark() + 1;
-  dict_->SetMark(runs_);
   used_ = 0;
   score_ = 0;
   for (int i = 0; i < M * N; i++) {
@@ -135,15 +133,12 @@ unsigned int Boggler<M, N>::InternalScore() {
   REC3(f, g, h)
 
 // PREFIX and SUFFIX could be inline methods instead, but this incurs a ~5% perf hit.
-#define PREFIX()                  \
-  int c = bd_[i], cc;             \
-  used_ ^= (1 << i);              \
-  len += (c == kQ ? 2 : 1);       \
-  if (t->IsWord()) {              \
-    if (t->Mark() != runs_) {     \
-      t->SetMark(runs_);          \
-      score_ += kWordScores[len]; \
-    }                             \
+#define PREFIX()                \
+  int c = bd_[i], cc;           \
+  used_ ^= (1 << i);            \
+  len += (c == kQ ? 2 : 1);     \
+  if (t->IsWord()) {            \
+    score_ += kWordScores[len]; \
   }
 
 #define SUFFIX() used_ ^= (1 << i)

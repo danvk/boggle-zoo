@@ -10,7 +10,7 @@
 using namespace std;
 
 CompactTrie::CompactTrie(CompactNode *nodes, size_t num_nodes)
-    : nodes_(nodes), num_nodes_(num_nodes), file_size_(0), fd_(-1) {}
+    : nodes_(nodes), file_size_(0), fd_(-1) {}
 
 CompactTrie::~CompactTrie() {
   // Clean up mmap'd memory.

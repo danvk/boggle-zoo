@@ -316,7 +316,6 @@ def build_trie(words: Iterable[str]):
 def write_binary_dict(nodes: list[CompactNode], output_file: str):
     """Write CompactNode list to binary file for C++ mmap."""
 
-    import ctypes
     import struct
 
     # Pass 1: construct an (implicit) array of nodes with gaps for children.
