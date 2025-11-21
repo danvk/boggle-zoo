@@ -39,8 +39,6 @@ class Node:
         return hash(
             (
                 self.is_word_,
-                self.tracking_,
-                # XXX: the id(v) is suspicious here!
                 tuple(sorted((k, id(v)) for k, v in self.children_.items())),
             )
         )
@@ -51,7 +49,6 @@ class Node:
             return False
         return (
             self.is_word_ == other.is_word_
-            and self.tracking_ == other.tracking_
             and self.children_.keys() == other.children_.keys()
             and all(
                 self.children_[k] is other.children_[k] for k in self.children_.keys()
@@ -238,13 +235,13 @@ class Node:
 class CompactNode:
     is_word_: bool
     child_mask_: int
+    first_child_: int
     tracking_: int
-    children_: list[int]
 
-    def __init__(self, is_word: bool, child_mask: int, tracking: int):
+    def __init__(self, is_word: bool, child_mask: int, first_child: int, tracking: int):
         self.is_word_ = is_word
         self.child_mask_ = child_mask
-        self.children_ = []
+        self.first_child_ = first_child
         self.tracking_ = tracking
 
     def descend(self, nodes: list[Self], letter_idx: int) -> Self:
@@ -252,10 +249,17 @@ class CompactNode:
         if not self.child_mask_ & (1 << letter_idx):
             return None
         child_idx = (self.child_mask_ & ((1 << letter_idx) - 1)).bit_count()
-        return nodes[self.children_[child_idx]]
+        return nodes[self.first_child_ + child_idx]
 
     def get_children(self, nodes: list[Self]):
-        return [nodes[child] for child in self.children_]
+        child = self.first_child_
+        child_mask = self.child_mask_
+        while child_mask:
+            while child_mask & 1 == 0:
+                child_mask >>= 1
+            yield nodes[child]
+            child += 1
+            child_mask >>= 1
 
     def count_words(self, nodes: list[Self]):
         num = 1 if self.is_word_ else 0
@@ -263,51 +267,219 @@ class CompactNode:
             num += child.count_words(nodes)
         return num
 
+    def is_word(self, nodes: list[Self], word: str) -> bool:
+        if not word:
+            return self.is_word_
+        first = word[0]
+        rest = word[1:]
+        idx = ord(first) - LETTER_A
+        child = self.descend(nodes, idx)
+        if not child:
+            return False
+        return child.is_word(nodes, rest)
+
+    def get_word_index(self, nodes: list[Self], word: str) -> int:
+        if not word:
+            assert self.is_word_
+            return 0
+
+        first = word[0]
+        rest = word[1:]
+        child = self.descend(nodes, ord(first) - LETTER_A)
+        return (
+            (1 if self.is_word_ else 0)
+            + child.tracking_
+            + child.get_word_index(nodes, rest)
+        )
+
+    @staticmethod
+    def _get_canonical_children(
+        nodes: list["CompactNode"], node_idx: int, canonical_map: dict[int, int]
+    ) -> list[int]:
+        """Get the list of canonical child indices for a node."""
+        node = nodes[node_idx]
+        canon_children = []
+        child_offset = 0
+        for bit in range(26):
+            if node.child_mask_ & (1 << bit):
+                old_child_idx = node.first_child_ + child_offset
+                canon_idx = canonical_map.get(old_child_idx, old_child_idx)
+                canon_children.append(canon_idx)
+                child_offset += 1
+        return canon_children
+
+    @staticmethod
+    def _find_subsequence(haystack: list[int], needle: list[int]) -> int | None:
+        """Find if needle appears as a consecutive subsequence in haystack.
+
+        Returns the starting index if found, None otherwise.
+        """
+        if not needle:
+            return None
+        needle_len = len(needle)
+        haystack_len = len(haystack)
+        if needle_len > haystack_len:
+            return None
+        for i in range(haystack_len - needle_len + 1):
+            if haystack[i : i + needle_len] == needle:
+                return i
+        return None
+
+    @staticmethod
+    def to_dawg(nodes: list["CompactNode"]) -> list["CompactNode"]:
+        """Convert CompactNode list to DAWG by consolidating equivalent nodes.
+
+        Returns a new list[CompactNode] where root is at index 0.
+        Two nodes are equivalent if they have the same is_word_, child_mask_,
+        tracking_, and all their children are equivalent.
+        """
+        if not nodes:
+            return nodes
+
+        # Step 1: Compute canonical mapping (bottom-up)
+        # Maps each node index to its canonical representative
+        canonical_map = {}
+        signature_map = {}  # Maps signature to canonical index
+
+        start_s = time.time()
+        # Process nodes in reverse order (leaves first)
+        for old_idx in range(len(nodes) - 1, -1, -1):
+            node = nodes[old_idx]
+
+            # Get canonical children for this node's signature
+            canon_children = CompactNode._get_canonical_children(
+                nodes, old_idx, canonical_map
+            )
+
+            # Create signature for this node
+            sig = (
+                node.is_word_,
+                node.child_mask_,
+                node.tracking_,
+                tuple(canon_children),
+            )
+
+            if sig in signature_map:
+                # This node is equivalent to an existing one
+                canonical_map[old_idx] = signature_map[sig]
+            else:
+                # This node is canonical
+                canonical_map[old_idx] = old_idx
+                signature_map[sig] = old_idx
+
+        part1_s = time.time()
+        print(f"Part 1: {part1_s - start_s} s")
+
+        # Step 2: BFS to build new_nodes, sharing children subsequences
+        # Key invariant: children are at consecutive indices starting at first_child_
+        # Optimization: share any subsequence of children, not just full sequences
+        new_nodes = []
+        new_nodes_canonical = []  # Tracks which old canonical idx each new node represents
+        subseq_map = {}  # Maps any subsequence (tuple) -> first index where it appears
+        queue = []
+
+        # Statistics
+        subseq_match_count = 0
+        subseq_create_count = 0
+
+        # Start with root's canonical node
+        root_canon_idx = canonical_map[0]
+        root_node = nodes[root_canon_idx]
+        new_nodes.append(
+            CompactNode(
+                root_node.is_word_, root_node.child_mask_, 0, root_node.tracking_
+            )
+        )
+        new_nodes_canonical.append(root_canon_idx)
+        # Register single-node subsequence
+        subseq_map[(root_canon_idx,)] = 0
+        queue.append((root_canon_idx, 0))
+
+        while queue:
+            old_canon_idx, new_idx = queue.pop(0)
+
+            if not nodes[old_canon_idx].child_mask_:
+                continue
+
+            # Get canonical children sequence
+            canon_children = CompactNode._get_canonical_children(
+                nodes, old_canon_idx, canonical_map
+            )
+            canon_children_tuple = tuple(canon_children)
+
+            # Try subsequence lookup (fast O(1) hash lookup)
+            first_child_idx = subseq_map.get(canon_children_tuple)
+
+            if first_child_idx is not None:
+                # Subsequence match found
+                new_nodes[new_idx].first_child_ = first_child_idx
+                subseq_match_count += 1
+            else:
+                # No match - create new sequence
+                first_child_idx = len(new_nodes)
+                new_nodes[new_idx].first_child_ = first_child_idx
+                subseq_create_count += 1
+
+                # Add all children consecutively and enqueue for processing
+                start_idx = len(new_nodes)
+                for canon_child_idx in canon_children:
+                    child_node = nodes[canon_child_idx]
+                    new_nodes.append(
+                        CompactNode(
+                            child_node.is_word_,
+                            child_node.child_mask_,
+                            0,  # Will be set when this node is processed
+                            child_node.tracking_,
+                        )
+                    )
+                    new_nodes_canonical.append(canon_child_idx)
+                    queue.append((canon_child_idx, len(new_nodes) - 1))
+
+                # Register all subsequences starting at start_idx
+                # This allows any future sequence to match against any part of what we just added
+                num_added = len(canon_children)
+                for subseq_start in range(num_added):
+                    for subseq_end in range(subseq_start + 1, num_added + 1):
+                        subseq = tuple(canon_children[subseq_start:subseq_end])
+                        # Only register if not already present (keep first occurrence)
+                        if subseq not in subseq_map:
+                            subseq_map[subseq] = start_idx + subseq_start
+
+        part2_s = time.time()
+        print(f"Part 2: {part2_s - part1_s} s")
+        print(
+            f"Sharing stats: {subseq_match_count} matched, {subseq_create_count} created, {len(subseq_map)} subsequences in map"
+        )
+        return new_nodes
+
 
 def compact_trie(root: Node) -> list[CompactNode]:
-    # Do two passes: one to number the nodes, a second to fill in those numbers.
-
-    # Pass 1: number the (unique) nodes.
-    node_ids = dict[Node, int]()
-    q: deque[Node] = deque()
-    q.append(root)
+    nodes: list[CompactNode] = []
+    # (current node, parent node index, child index)
+    q: deque[tuple[Node, int, int]] = deque()
+    q.append((root, None, -1))
+    max_offset = 0
     while q:
-        node = q.popleft()
-        if node in node_ids:
-            continue  # already been here
-        node_ids[node] = len(node_ids)
-        for child in node.children_.values():
-            q.append(child)
-
-    # Pass 2: fill in the compact nodes array.
-    nodes: list[CompactNode] = [None] * len(node_ids)
-    q.append(root)
-    while q:
-        node = q.popleft()
-        id = node_ids[node]
-        if nodes[id]:
+        node, parent_idx, child_index = q.popleft()
+        if node == 0:
             continue
-        compact_node = CompactNode(node.is_word_, 0, node.tracking_)
-        nodes[id] = compact_node
-        compact_node.children_ = [node_ids[child] for child in node.children_.values()]
 
+        compact_node_idx = len(nodes)
+        compact_node = CompactNode(node.is_word_, 0, 0, node.tracking_)
+        nodes.append(compact_node)
+
+        # Record the first child offset when it's added
+        if parent_idx is not None and child_index == 0:
+            delta = compact_node_idx - parent_idx
+            nodes[parent_idx].first_child_ = compact_node_idx
+            max_offset = max(max_offset, delta)
+
+        num_children = 0
         for c, child in node.children_.items():
             i = ord(c) - LETTER_A
             compact_node.child_mask_ |= 1 << i
-            q.append(child)
-
-    # Make sure we've converted everything.
-    max_delta = 0
-    min_delta = 0
-    for i, node in enumerate(nodes):
-        for child in node.children_:
-            delta = child - i
-            min_delta = min(min_delta, delta)
-            max_delta = max(max_delta, delta)
-        assert node
-
-    print(f"{min_delta=}, {max_delta=}")
-
+            q.append((child, compact_node_idx, num_children))
+            num_children += 1
     return nodes
 
 
@@ -329,8 +501,7 @@ def write_binary_dict(nodes: list[CompactNode], output_file: str):
     tracking = []
     for node in nodes:
         node_to_index[node] = n
-        n += 2
-        n += len(node.children_)
+        n += 1
         tracking.append(node.tracking_)
     num_slots = n
 
@@ -338,29 +509,21 @@ def write_binary_dict(nodes: list[CompactNode], output_file: str):
     print(f"Ten biggest tracking numbers: {tracking[:10]}")
 
     # Pass 2: fill in the bytes
-    n = 0
     min_delta = max_delta = 0
     with open(output_file, "wb") as f:
-        for node in nodes:
-            node_idx = n
+        for i, node in enumerate(nodes):
             child_mask = node.child_mask_
             if node.is_word_:
                 child_mask += 1 << 31
+            offset = node.first_child_ - i
+            min_delta = min(offset, min_delta)
+            max_delta = max(offset, max_delta)
             f.write(struct.pack("I", child_mask))  # I = 32-bit unsigned
+            f.write(struct.pack("i", offset))  # i = 32-bit signed
             f.write(struct.pack("I", node.tracking_))
-            n += 2
-            for child in node.get_children(nodes):
-                child_idx = node_to_index[child]
-                delta = child_idx - node_idx
-                min_delta = min(delta, min_delta)
-                max_delta = max(delta, max_delta)
-                f.write(struct.pack("i", delta))  # i = 32-bit signed
-                n += 1
-
-    assert n == num_slots
 
     print(
-        f"Wrote {len(nodes)} nodes to {output_file} ({num_slots * 4} bytes); {min_delta=} {max_delta=}"
+        f"Wrote {len(nodes)} nodes to {output_file} ({num_slots * 12} bytes); {min_delta=} {max_delta=}"
     )
 
 
@@ -396,7 +559,9 @@ def main():
     words.sort()
     trie = build_trie(words)
     trie.set_tracking()
-    trie = trie.to_dawg()
+
+    if args.dawg:
+        trie = trie.to_dawg()
 
     if args.dot:
         print(trie.to_dot())
@@ -410,11 +575,22 @@ def main():
     compact_nodes = compact_trie(trie)
     end_s = time.time()
     print(f"Compact trie: {end_s - start_s} s")
-    # compact_dawg = CompactNode.to_dawg(compact_nodes)
-    # print(f"Compact {len(compact_nodes)} -> {len(compact_dawg)}")
+    compact_dawg = CompactNode.to_dawg(compact_nodes)
+    print(f"Compact {len(compact_nodes)} -> {len(compact_dawg)}")
 
     if args.binary:
-        write_binary_dict(compact_nodes, args.binary)
+        write_binary_dict(compact_dawg, args.binary)
+
+    if args.check_index:
+        compact_root = compact_dawg[0]
+        for idx, word in enumerate(words):
+            assert trie.is_word(word)
+            calc_idx = trie.get_word_index(word)
+            calc_idx_tracking = trie.get_word_index_tracking(word)
+            assert calc_idx == idx, f"{word} {calc_idx} != {idx}"
+            assert calc_idx_tracking == idx, f"{word} {calc_idx_tracking} != {idx}"
+            calc_idx_dawg = compact_root.get_word_index(compact_dawg, word)
+            assert calc_idx_dawg == idx, f"{word} {calc_idx_dawg} != {idx}"
 
 
 if __name__ == "__main__":

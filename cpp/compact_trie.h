@@ -15,8 +15,8 @@ using namespace std;
 // Binary format node
 struct CompactNode {
   uint32_t child_mask_;
+  int32_t first_child_offset_;
   uint32_t tracking_;
-  int32_t children[];  // Child indices
 
   bool StartsWord(int i) const { return child_mask_ & (1 << i); }
   bool IsWord() const { return child_mask_ & (1 << 31); }
@@ -28,8 +28,8 @@ struct CompactNode {
     }
     uint32_t mask_before = child_mask_ & (letter_bit - 1);
     int child_index = std::popcount(mask_before);
-    auto child_offset = children[child_index];
-    auto child = (CompactNode *)((uint32_t *)this + child_offset);
+    auto child_offset = first_child_offset_ + child_index;
+    auto child = this + child_offset;
     return child;
   }
 };
