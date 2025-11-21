@@ -16,7 +16,7 @@ class Boggler {
         sizeof(kWordScores) / sizeof(kWordScores[0]) - 1 >= M * N,
         "kWordScores must have at least M * N + 1 elements"
     );
-    word_marks_.resize(dict_->words_under_);
+    word_marks_.resize(t->NumWords());
   }
 
   int Score(const char* lets);
@@ -103,22 +103,22 @@ unsigned int Boggler<M, N>::InternalScore() {
   for (int i = 0; i < M * N; i++) {
     int c = bd_[i];
     if (dict_->StartsWord(c)) {
-      auto [tc, track] = dict_->Descend(c);
-      DoDFS(i, 0, track, tc);
+      auto tc = dict_->Descend(c);
+      DoDFS(i, 0, tc->tracking_, tc);
     }
   }
   return score_;
 }
 
-#define REC(idx)                                  \
-  do {                                            \
-    if ((used_ & (1 << idx)) == 0) {              \
-      cc = bd_[idx];                              \
-      auto [tc, child_track] = t->Descend(cc);    \
-      if (tc) {                                   \
-        DoDFS(idx, len, track + child_track, tc); \
-      }                                           \
-    }                                             \
+#define REC(idx)                                    \
+  do {                                              \
+    if ((used_ & (1 << idx)) == 0) {                \
+      cc = bd_[idx];                                \
+      auto tc = t->Descend(cc);                     \
+      if (tc) {                                     \
+        DoDFS(idx, len, track + tc->tracking_, tc); \
+      }                                             \
+    }                                               \
   } while (0)
 
 #define REC3(a, b, c) \

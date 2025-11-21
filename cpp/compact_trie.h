@@ -15,29 +15,23 @@ using namespace std;
 // Binary format node
 struct CompactNode {
   uint32_t child_mask_;
-  uint32_t words_under_;
+  uint32_t tracking_;
   int32_t children[];  // Child indices
 
   bool StartsWord(int i) const { return child_mask_ & (1 << i); }
   bool IsWord() const { return child_mask_ & (1 << 31); }
 
-  pair<CompactNode *, uint32_t> Descend(int i) {
+  CompactNode *Descend(int i) {
     uint32_t letter_bit = 1u << i;
     if (!(child_mask_ & letter_bit)) {
-      return {nullptr, 0};
+      return nullptr;
     }
     uint32_t mask_before = child_mask_ & (letter_bit - 1);
     int child_index = std::popcount(mask_before);
-    uint32_t word_id = 0;
-    for (int idx = 0; idx < child_index; idx++) {
-      auto child_offset = children[idx];
-      auto child = (CompactNode *)((uint32_t *)this + child_offset);
-      word_id += child->words_under_;
-    }
     auto child_offset = children[child_index];
     auto child = (CompactNode *)((uint32_t *)this + child_offset);
-    return {child, word_id};
-  };
+    return child;
+  }
 };
 
 // Trie-like interface backed by mmap'd CompactNode array
@@ -49,6 +43,7 @@ class CompactTrie {
   CompactNode *GetRoot() { return nodes_; }
 
   const string &WordAtIndex(uint32_t index) { return words_[index]; }
+  uint32_t NumWords() { return words_.size(); }
 
   // Loading from binary file
   static unique_ptr<CompactTrie> CreateFromBinaryFile(const char *filename);
