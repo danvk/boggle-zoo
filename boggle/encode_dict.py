@@ -402,7 +402,7 @@ def main():
     start_s = time.time()
     compact_nodes = compact_trie(trie)
     end_s = time.time()
-    print(f"Compact trie: {end_s - start_s} s")
+    print(f"Compact trie: {end_s - start_s} s; {len(compact_nodes)} nodes")
     # compact_dawg = CompactNode.to_dawg(compact_nodes)
     # print(f"Compact {len(compact_nodes)} -> {len(compact_dawg)}")
 
