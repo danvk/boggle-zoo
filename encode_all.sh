@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-for dict in wordlists/*.txt; do
+for dict in wordlists/twl06.jpa14.txt wordlists/twl06.txt; do
     set -x
     uv run boggle/encode_dict.py $dict --binary ${dict/txt/bin}
     set +x

@@ -27,14 +27,8 @@ class Boggler {
   void SetCell(int x, int y, unsigned int c);
   unsigned int Cell(int x, int y) const;
 
-  // This is used by the web Boggle UI
-  vector<vector<int>> FindWords(const string& lets, bool multiboggle);
-
  private:
-  void DoDFS(unsigned int i, unsigned int len, CompactNode* t);
-  void FindWordsDFS(
-      unsigned int i, CompactNode* t, bool multiboggle, vector<vector<int>>& out
-  );
+  void DoDFS(unsigned int i, unsigned int len, uint32_t track, CompactNode* t);
   unsigned int InternalScore();
   bool ParseBoard(const char* bd);
 
@@ -102,20 +96,25 @@ unsigned int Boggler<M, N>::InternalScore() {
   score_ = 0;
   for (int i = 0; i < M * N; i++) {
     int c = bd_[i];
-    if (dict_->StartsWord(c)) DoDFS(i, 0, dict_->Descend(c));
+    if (dict_->StartsWord(c)) {
+      uint32_t track = 0;
+      auto tc = dict_->Descend(c, track);
+      DoDFS(i, 0, track, tc);
+    }
   }
   return score_;
 }
 
-#define REC(idx)                     \
-  do {                               \
-    if ((used_ & (1 << idx)) == 0) { \
-      cc = bd_[idx];                 \
-      auto tc = t->Descend(cc);      \
-      if (tc) {                      \
-        DoDFS(idx, len, tc);         \
-      }                              \
-    }                                \
+#define REC(idx)                             \
+  do {                                       \
+    if ((used_ & (1 << idx)) == 0) {         \
+      cc = bd_[idx];                         \
+      child_track = track;                   \
+      auto tc = t->Descend(cc, child_track); \
+      if (tc) {                              \
+        DoDFS(idx, len, child_track, tc);    \
+      }                                      \
+    }                                        \
   } while (0)
 
 #define REC3(a, b, c) \
@@ -135,10 +134,12 @@ unsigned int Boggler<M, N>::InternalScore() {
 // PREFIX and SUFFIX could be inline methods instead, but this incurs a ~5% perf hit.
 #define PREFIX()                \
   int c = bd_[i], cc;           \
+  uint32_t child_track;         \
   used_ ^= (1 << i);            \
   len += (c == kQ ? 2 : 1);     \
   if (t->IsWord()) {            \
     score_ += kWordScores[len]; \
+    track++;                    \
   }
 
 #define SUFFIX() used_ ^= (1 << i)
@@ -152,7 +153,7 @@ for (w, h), neighbors in NEIGHBORS.items():
     print(f"""
 // {w}x{h}
 template<>
-void Boggler<{w}, {h}>::DoDFS(unsigned int i, unsigned int len, CompactNode* t) {{
+void Boggler<{w}, {h}>::DoDFS(unsigned int i, unsigned int len, uint32_t track, CompactNode* t) {{
   PREFIX();
   switch(i) {{""")
     for i, ns in enumerate(neighbors):
@@ -166,7 +167,7 @@ void Boggler<{w}, {h}>::DoDFS(unsigned int i, unsigned int len, CompactNode* t) 
 
 // 2x2
 template<>
-void Boggler<2, 2>::DoDFS(unsigned int i, unsigned int len, CompactNode* t) {
+void Boggler<2, 2>::DoDFS(unsigned int i, unsigned int len, uint32_t track, CompactNode* t) {
   PREFIX();
   switch(i) {
     case 0: REC3(1, 2, 3); break;
@@ -179,7 +180,7 @@ void Boggler<2, 2>::DoDFS(unsigned int i, unsigned int len, CompactNode* t) {
 
 // 2x3
 template<>
-void Boggler<2, 3>::DoDFS(unsigned int i, unsigned int len, CompactNode* t) {
+void Boggler<2, 3>::DoDFS(unsigned int i, unsigned int len, uint32_t track, CompactNode* t) {
   PREFIX();
   switch(i) {
     case 0: REC3(1, 3, 4); break;
@@ -194,7 +195,7 @@ void Boggler<2, 3>::DoDFS(unsigned int i, unsigned int len, CompactNode* t) {
 
 // 3x3
 template<>
-void Boggler<3, 3>::DoDFS(unsigned int i, unsigned int len, CompactNode* t) {
+void Boggler<3, 3>::DoDFS(unsigned int i, unsigned int len, uint32_t track, CompactNode* t) {
   PREFIX();
   switch(i) {
     case 0: REC3(1, 3, 4); break;
@@ -212,7 +213,7 @@ void Boggler<3, 3>::DoDFS(unsigned int i, unsigned int len, CompactNode* t) {
 
 // 3x4
 template<>
-void Boggler<3, 4>::DoDFS(unsigned int i, unsigned int len, CompactNode* t) {
+void Boggler<3, 4>::DoDFS(unsigned int i, unsigned int len, uint32_t track, CompactNode* t) {
   PREFIX();
   switch(i) {
     case 0: REC3(1, 4, 5); break;
@@ -233,7 +234,7 @@ void Boggler<3, 4>::DoDFS(unsigned int i, unsigned int len, CompactNode* t) {
 
 // 4x4
 template<>
-void Boggler<4, 4>::DoDFS(unsigned int i, unsigned int len, CompactNode* t) {
+void Boggler<4, 4>::DoDFS(unsigned int i, unsigned int len, uint32_t track, CompactNode* t) {
   PREFIX();
   switch(i) {
     case 0: REC3(1, 4, 5); break;
@@ -258,7 +259,7 @@ void Boggler<4, 4>::DoDFS(unsigned int i, unsigned int len, CompactNode* t) {
 
 // 4x5
 template<>
-void Boggler<4, 5>::DoDFS(unsigned int i, unsigned int len, CompactNode* t) {
+void Boggler<4, 5>::DoDFS(unsigned int i, unsigned int len, uint32_t track, CompactNode* t) {
   PREFIX();
   switch(i) {
     case 0: REC3(1, 5, 6); break;
@@ -287,7 +288,7 @@ void Boggler<4, 5>::DoDFS(unsigned int i, unsigned int len, CompactNode* t) {
 
 // 5x5
 template<>
-void Boggler<5, 5>::DoDFS(unsigned int i, unsigned int len, CompactNode* t) {
+void Boggler<5, 5>::DoDFS(unsigned int i, unsigned int len, uint32_t track, CompactNode* t) {
   PREFIX();
   switch(i) {
     case 0: REC3(1, 5, 6); break;

@@ -18,25 +18,24 @@ struct CompactNode {
   uint32_t words_under_;
   int32_t children[];  // Child indices
 
-  // Fast operations matching old Trie interface
   bool StartsWord(int i) const { return child_mask_ & (1 << i); }
   bool IsWord() const { return child_mask_ & (1 << 31); }
 
-  CompactNode *Descend(int i, int &word_id) {
+  CompactNode *Descend(int i, uint32_t &word_id) {
     uint32_t letter_bit = 1u << i;
     if (!(child_mask_ & letter_bit)) {
       return nullptr;
     }
     uint32_t mask_before = child_mask_ & (letter_bit - 1);
     int child_index = std::popcount(mask_before);
-    for (int i = 0; i < child_index; i++) {
-      auto child_offset = children[child_index];
-      // TODO: this isn't right, need uint32*
-      auto child = this + child_offset;
+    for (int idx = 0; idx < child_index; idx++) {
+      auto child_offset = children[idx];
+      auto child = (CompactNode *)((uint32_t *)this + child_offset);
       word_id += child->words_under_;
     }
     auto child_offset = children[child_index];
-    return this + child_offset;
+    auto child = (CompactNode *)((uint32_t *)this + child_offset);
+    return child;
   };
 };
 
