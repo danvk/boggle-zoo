@@ -134,20 +134,17 @@ unsigned int Boggler<M, N>::InternalScore() {
   REC3(f, g, h)
 
 // PREFIX and SUFFIX could be inline methods instead, but this incurs a ~5% perf hit.
-#define PREFIX()                                               \
-  int c = bd_[i], cc;                                          \
-  uint32_t child_track;                                        \
-  used_ ^= (1 << i);                                           \
-  len += (c == kQ ? 2 : 1);                                    \
-  if (t->IsWord()) {                                           \
-    if (word_marks_[track] != runs_) {                         \
-      word_marks_[track] = runs_;                              \
-      score_ += kWordScores[len];                              \
-      printf("Found %s\n", trie_->WordAtIndex(track).c_str()); \
-    } else {                                                   \
-      printf("dupe: %s\n", trie_->WordAtIndex(track).c_str()); \
-    }                                                          \
-    track++;                                                   \
+#define PREFIX()                       \
+  int c = bd_[i], cc;                  \
+  uint32_t child_track;                \
+  used_ ^= (1 << i);                   \
+  len += (c == kQ ? 2 : 1);            \
+  if (t->IsWord()) {                   \
+    if (word_marks_[track] != runs_) { \
+      word_marks_[track] = runs_;      \
+      score_ += kWordScores[len];      \
+    }                                  \
+    track++;                           \
   }
 
 #define SUFFIX() used_ ^= (1 << i)
