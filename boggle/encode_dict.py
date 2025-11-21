@@ -323,11 +323,16 @@ def write_binary_dict(nodes: list[CompactNode], output_file: str):
     # Pass 1: construct an (implicit) array of nodes with gaps for children.
     n = 0
     node_to_index = dict[CompactNode, int]()
+    counts_under = []
     for node in nodes:
         node_to_index[node] = n
         n += 2
         n += len(node.children_)
+        counts_under.append(node.words_under_)
     num_slots = n
+
+    counts_under.sort(reverse=True)
+    print(f"Ten biggest counts_under: {counts_under[:10]}")
 
     # Pass 2: fill in the bytes
     n = 0
