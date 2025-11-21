@@ -32,13 +32,15 @@ class Node:
         self.is_word_ = False
         self.children_ = {}
         self.words_under_ = None
-        self.tracking_ = None
+        self.tracking_ = 0
 
     def __hash__(self):
         """Hash based on the node's structure for DAWG deduplication."""
         return hash(
             (
                 self.is_word_,
+                self.tracking_,
+                # XXX: the id(v) is suspicious here!
                 tuple(sorted((k, id(v)) for k, v in self.children_.items())),
             )
         )
@@ -49,6 +51,7 @@ class Node:
             return False
         return (
             self.is_word_ == other.is_word_
+            and self.tracking_ == other.tracking_
             and self.children_.keys() == other.children_.keys()
             and all(
                 self.children_[k] is other.children_[k] for k in self.children_.keys()
@@ -235,14 +238,14 @@ class Node:
 class CompactNode:
     is_word_: bool
     child_mask_: int
-    words_under_: int
+    tracking_: int
     children_: list[int]
 
-    def __init__(self, is_word: bool, child_mask: int, words_under: int):
+    def __init__(self, is_word: bool, child_mask: int, tracking: int):
         self.is_word_ = is_word
         self.child_mask_ = child_mask
         self.children_ = []
-        self.words_under_ = words_under
+        self.tracking_ = tracking
 
     def descend(self, nodes: list[Self], letter_idx: int) -> Self:
         assert 0 <= letter_idx < 26
@@ -284,7 +287,7 @@ def compact_trie(root: Node) -> list[CompactNode]:
         id = node_ids[node]
         if nodes[id]:
             continue
-        compact_node = CompactNode(node.is_word_, 0, node.words_under_)
+        compact_node = CompactNode(node.is_word_, 0, node.tracking_)
         nodes[id] = compact_node
         compact_node.children_ = [node_ids[child] for child in node.children_.values()]
 
@@ -323,16 +326,16 @@ def write_binary_dict(nodes: list[CompactNode], output_file: str):
     # Pass 1: construct an (implicit) array of nodes with gaps for children.
     n = 0
     node_to_index = dict[CompactNode, int]()
-    counts_under = []
+    tracking = []
     for node in nodes:
         node_to_index[node] = n
         n += 2
         n += len(node.children_)
-        counts_under.append(node.words_under_)
+        tracking.append(node.tracking_)
     num_slots = n
 
-    counts_under.sort(reverse=True)
-    print(f"Ten biggest counts_under: {counts_under[:10]}")
+    tracking.sort(reverse=True)
+    print(f"Ten biggest tracking numbers: {tracking[:10]}")
 
     # Pass 2: fill in the bytes
     n = 0
@@ -344,7 +347,7 @@ def write_binary_dict(nodes: list[CompactNode], output_file: str):
             if node.is_word_:
                 child_mask += 1 << 31
             f.write(struct.pack("I", child_mask))  # I = 32-bit unsigned
-            f.write(struct.pack("I", node.words_under_))
+            f.write(struct.pack("I", node.tracking_))
             n += 2
             for child in node.get_children(nodes):
                 child_idx = node_to_index[child]
@@ -357,7 +360,7 @@ def write_binary_dict(nodes: list[CompactNode], output_file: str):
     assert n == num_slots
 
     print(
-        f"Wrote {num_slots} words to {output_file} ({num_slots * 4} bytes); {min_delta=} {max_delta=}"
+        f"Wrote {len(nodes)} nodes to {output_file} ({num_slots * 4} bytes); {min_delta=} {max_delta=}"
     )
 
 
@@ -392,8 +395,7 @@ def main():
     words = [word for word in words if word is not None]
     words.sort()
     trie = build_trie(words)
-    # trie.set_tracking()
-    trie.count_words()
+    trie.set_tracking()
     trie = trie.to_dawg()
 
     if args.dot:
