@@ -14,20 +14,27 @@ using namespace std;
 
 // Binary format node
 struct CompactNode {
-  uint32_t child_mask;
+  uint32_t child_mask_;
+  uint32_t words_under_;
   int32_t children[];  // Child indices
 
   // Fast operations matching old Trie interface
-  bool StartsWord(int i) const { return child_mask & (1 << i); }
-  bool IsWord() const { return child_mask & (1 << 31); }
+  bool StartsWord(int i) const { return child_mask_ & (1 << i); }
+  bool IsWord() const { return child_mask_ & (1 << 31); }
 
-  CompactNode *Descend(int i) {
+  CompactNode *Descend(int i, int &word_id) {
     uint32_t letter_bit = 1u << i;
-    if (!(child_mask & letter_bit)) {
+    if (!(child_mask_ & letter_bit)) {
       return nullptr;
     }
-    uint32_t mask_before = child_mask & (letter_bit - 1);
+    uint32_t mask_before = child_mask_ & (letter_bit - 1);
     int child_index = std::popcount(mask_before);
+    for (int i = 0; i < child_index; i++) {
+      auto child_offset = children[child_index];
+      // TODO: this isn't right, need uint32*
+      auto child = this + child_offset;
+      word_id += child->words_under_;
+    }
     auto child_offset = children[child_index];
     return this + child_offset;
   };

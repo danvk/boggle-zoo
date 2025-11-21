@@ -235,12 +235,14 @@ class Node:
 class CompactNode:
     is_word_: bool
     child_mask_: int
+    words_under_: int
     children_: list[int]
 
-    def __init__(self, is_word: bool, child_mask: int):
+    def __init__(self, is_word: bool, child_mask: int, words_under: int):
         self.is_word_ = is_word
         self.child_mask_ = child_mask
         self.children_ = []
+        self.words_under_ = words_under
 
     def descend(self, nodes: list[Self], letter_idx: int) -> Self:
         assert 0 <= letter_idx < 26
@@ -282,7 +284,7 @@ def compact_trie(root: Node) -> list[CompactNode]:
         id = node_ids[node]
         if nodes[id]:
             continue
-        compact_node = CompactNode(node.is_word_, 0)
+        compact_node = CompactNode(node.is_word_, 0, node.words_under_)
         nodes[id] = compact_node
         compact_node.children_ = [node_ids[child] for child in node.children_.values()]
 
@@ -323,7 +325,7 @@ def write_binary_dict(nodes: list[CompactNode], output_file: str):
     node_to_index = dict[CompactNode, int]()
     for node in nodes:
         node_to_index[node] = n
-        n += 1
+        n += 2
         n += len(node.children_)
     num_slots = n
 
@@ -337,7 +339,8 @@ def write_binary_dict(nodes: list[CompactNode], output_file: str):
             if node.is_word_:
                 child_mask += 1 << 31
             f.write(struct.pack("I", child_mask))  # I = 32-bit unsigned
-            n += 1
+            f.write(struct.pack("I", node.words_under_))
+            n += 2
             for child in node.get_children(nodes):
                 child_idx = node_to_index[child]
                 delta = child_idx - node_idx
@@ -385,7 +388,7 @@ def main():
     words.sort()
     trie = build_trie(words)
     # trie.set_tracking()
-
+    trie.count_words()
     trie = trie.to_dawg()
 
     if args.dot:
