@@ -47,6 +47,8 @@ class CompactTrie {
 
   CompactNode *GetRoot() { return nodes_; }
 
+  const string &WordAtIndex(uint32_t index) { return words_[index]; }
+
   // Loading from binary file
   static unique_ptr<CompactTrie> CreateFromBinaryFile(const char *filename);
 
@@ -55,6 +57,8 @@ class CompactTrie {
 
  private:
   CompactNode *nodes_;  // mmap'd array of nodes (owned by root only)
+
+  vector<string> words_;
 
   // For memory management
   size_t file_size_;

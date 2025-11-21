@@ -1,5 +1,6 @@
 #include "compact_trie.h"
 
+#include <assert.h>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -79,6 +80,31 @@ unique_ptr<CompactTrie> CompactTrie::CreateFromBinaryFile(const char *filename) 
   CompactTrie *root = new CompactTrie(nodes, num_nodes);
   root->file_size_ = file_size;
   root->fd_ = fd;
+
+  // Replace a trailing ".bin" with ".txt" and try to load words from that file.
+  std::string txt_name = filename;
+  const std::string bin_suffix = ".bin";
+  assert(txt_name.ends_with(".bin"));
+  txt_name.replace(txt_name.size() - bin_suffix.size(), bin_suffix.size(), ".txt");
+
+  FILE *f = fopen(txt_name.c_str(), "r");
+  if (f == nullptr) {
+    fprintf(stderr, "No corresponding word list found: %s\n", txt_name.c_str());
+  } else {
+    char buf[4096];
+    while (fgets(buf, sizeof(buf), f)) {
+      size_t len = strlen(buf);
+      while (len > 0 && (buf[len - 1] == '\n' || buf[len - 1] == '\r')) {
+        buf[--len] = '\0';
+      }
+      if (len == 0) continue;
+      root->words_.emplace_back(buf);
+    }
+    fclose(f);
+    fprintf(
+        stderr, "Loaded %zu words from %s\n", root->words_.size(), txt_name.c_str()
+    );
+  }
 
   return unique_ptr<CompactTrie>(root);
 }
