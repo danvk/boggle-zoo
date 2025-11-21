@@ -21,13 +21,14 @@ struct CompactNode {
   bool StartsWord(int i) const { return child_mask_ & (1 << i); }
   bool IsWord() const { return child_mask_ & (1 << 31); }
 
-  CompactNode *Descend(int i, uint32_t &word_id) {
+  pair<CompactNode *, uint32_t> Descend(int i) {
     uint32_t letter_bit = 1u << i;
     if (!(child_mask_ & letter_bit)) {
-      return nullptr;
+      return {nullptr, 0};
     }
     uint32_t mask_before = child_mask_ & (letter_bit - 1);
     int child_index = std::popcount(mask_before);
+    uint32_t word_id = 0;
     for (int idx = 0; idx < child_index; idx++) {
       auto child_offset = children[idx];
       auto child = (CompactNode *)((uint32_t *)this + child_offset);
@@ -35,7 +36,7 @@ struct CompactNode {
     }
     auto child_offset = children[child_index];
     auto child = (CompactNode *)((uint32_t *)this + child_offset);
-    return child;
+    return {child, word_id};
   };
 };
 

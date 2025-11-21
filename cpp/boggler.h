@@ -103,24 +103,22 @@ unsigned int Boggler<M, N>::InternalScore() {
   for (int i = 0; i < M * N; i++) {
     int c = bd_[i];
     if (dict_->StartsWord(c)) {
-      uint32_t track = 0;
-      auto tc = dict_->Descend(c, track);
+      auto [tc, track] = dict_->Descend(c);
       DoDFS(i, 0, track, tc);
     }
   }
   return score_;
 }
 
-#define REC(idx)                             \
-  do {                                       \
-    if ((used_ & (1 << idx)) == 0) {         \
-      cc = bd_[idx];                         \
-      child_track = track;                   \
-      auto tc = t->Descend(cc, child_track); \
-      if (tc) {                              \
-        DoDFS(idx, len, child_track, tc);    \
-      }                                      \
-    }                                        \
+#define REC(idx)                                  \
+  do {                                            \
+    if ((used_ & (1 << idx)) == 0) {              \
+      cc = bd_[idx];                              \
+      auto [tc, child_track] = t->Descend(cc);    \
+      if (tc) {                                   \
+        DoDFS(idx, len, track + child_track, tc); \
+      }                                           \
+    }                                             \
   } while (0)
 
 #define REC3(a, b, c) \
@@ -140,7 +138,6 @@ unsigned int Boggler<M, N>::InternalScore() {
 // PREFIX and SUFFIX could be inline methods instead, but this incurs a ~5% perf hit.
 #define PREFIX()                       \
   int c = bd_[i], cc;                  \
-  uint32_t child_track;                \
   used_ ^= (1 << i);                   \
   len += (c == kQ ? 2 : 1);            \
   if (t->IsWord()) {                   \
