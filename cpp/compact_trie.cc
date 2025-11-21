@@ -23,6 +23,30 @@ CompactTrie::~CompactTrie() {
   }
 }
 
+// Replaces "qu" with "q" in-place; returns true if the word is a valid boggle word
+// (IsBoggleWord).
+bool IsBoggleWord(const char *wd) {
+  int size = strlen(wd);
+  if (size < 3) return false;
+  for (int i = 0; i < size; ++i) {
+    int c = wd[i];
+    if (c < 'a' || c > 'z') return false;
+    if (c == 'q' && (i + 1 >= size || wd[1 + i] != 'u')) return false;
+  }
+  return true;
+}
+
+bool BogglifyWord(char *word) {
+  if (!IsBoggleWord(word)) return false;
+  int src, dst;
+  for (src = 0, dst = 0; word[src]; src++, dst++) {
+    word[dst] = word[src];
+    if (word[src] == 'q') src += 1;
+  }
+  word[dst] = word[src];
+  return true;
+}
+
 unique_ptr<CompactTrie> CompactTrie::CreateFromBinaryFile(const char *filename) {
   // Open file
   int fd = open(filename, O_RDONLY);
@@ -98,12 +122,15 @@ unique_ptr<CompactTrie> CompactTrie::CreateFromBinaryFile(const char *filename) 
         buf[--len] = '\0';
       }
       if (len == 0) continue;
-      root->words_.emplace_back(buf);
+      if (BogglifyWord(buf)) {
+        root->words_.emplace_back(buf);
+      }
     }
     fclose(f);
     fprintf(
         stderr, "Loaded %zu words from %s\n", root->words_.size(), txt_name.c_str()
     );
+    fprintf(stderr, "First word is '%s'\n", root->words_[0].c_str());
   }
 
   return unique_ptr<CompactTrie>(root);

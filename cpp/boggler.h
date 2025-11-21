@@ -11,7 +11,7 @@
 template <int M, int N>
 class Boggler {
  public:
-  Boggler(CompactTrie* t) : dict_(t->GetRoot()), runs_(0) {
+  Boggler(CompactTrie* t) : trie_(t), dict_(t->GetRoot()), runs_(0) {
     static_assert(
         sizeof(kWordScores) / sizeof(kWordScores[0]) - 1 >= M * N,
         "kWordScores must have at least M * N + 1 elements"
@@ -33,6 +33,7 @@ class Boggler {
   unsigned int InternalScore();
   bool ParseBoard(const char* bd);
 
+  CompactTrie* trie_;
   CompactNode* dict_;
   unsigned int used_;
   int bd_[M * N];
@@ -133,17 +134,20 @@ unsigned int Boggler<M, N>::InternalScore() {
   REC3(f, g, h)
 
 // PREFIX and SUFFIX could be inline methods instead, but this incurs a ~5% perf hit.
-#define PREFIX()                       \
-  int c = bd_[i], cc;                  \
-  uint32_t child_track;                \
-  used_ ^= (1 << i);                   \
-  len += (c == kQ ? 2 : 1);            \
-  if (t->IsWord()) {                   \
-    if (word_marks_[track] != runs_) { \
-      word_marks_[track] = runs_;      \
-      score_ += kWordScores[len];      \
-      track++;                         \
-    }                                  \
+#define PREFIX()                                               \
+  int c = bd_[i], cc;                                          \
+  uint32_t child_track;                                        \
+  used_ ^= (1 << i);                                           \
+  len += (c == kQ ? 2 : 1);                                    \
+  if (t->IsWord()) {                                           \
+    if (word_marks_[track] != runs_) {                         \
+      word_marks_[track] = runs_;                              \
+      score_ += kWordScores[len];                              \
+      printf("Found %s\n", trie_->WordAtIndex(track).c_str()); \
+    } else {                                                   \
+      printf("dupe: %s\n", trie_->WordAtIndex(track).c_str()); \
+    }                                                          \
+    track++;                                                   \
   }
 
 #define SUFFIX() used_ ^= (1 << i)
