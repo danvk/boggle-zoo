@@ -16,6 +16,7 @@ class Boggler {
         sizeof(kWordScores) / sizeof(kWordScores[0]) - 1 >= M * N,
         "kWordScores must have at least M * N + 1 elements"
     );
+    word_marks_.resize(dict_->words_under_);
   }
 
   int Score(const char* lets);
@@ -37,8 +38,7 @@ class Boggler {
   int bd_[M * N];
   unsigned int score_;
   unsigned int runs_;
-  vector<int> seq_;
-  unordered_set<uint64_t> found_words_;
+  vector<uint32_t> word_marks_;
 };
 
 template <int M, int N>
@@ -94,6 +94,7 @@ template <int M, int N>
 unsigned int Boggler<M, N>::InternalScore() {
   used_ = 0;
   score_ = 0;
+  runs_++;
   for (int i = 0; i < M * N; i++) {
     int c = bd_[i];
     if (dict_->StartsWord(c)) {
@@ -132,14 +133,17 @@ unsigned int Boggler<M, N>::InternalScore() {
   REC3(f, g, h)
 
 // PREFIX and SUFFIX could be inline methods instead, but this incurs a ~5% perf hit.
-#define PREFIX()                \
-  int c = bd_[i], cc;           \
-  uint32_t child_track;         \
-  used_ ^= (1 << i);            \
-  len += (c == kQ ? 2 : 1);     \
-  if (t->IsWord()) {            \
-    score_ += kWordScores[len]; \
-    track++;                    \
+#define PREFIX()                       \
+  int c = bd_[i], cc;                  \
+  uint32_t child_track;                \
+  used_ ^= (1 << i);                   \
+  len += (c == kQ ? 2 : 1);            \
+  if (t->IsWord()) {                   \
+    if (word_marks_[track] != runs_) { \
+      word_marks_[track] = runs_;      \
+      score_ += kWordScores[len];      \
+      track++;                         \
+    }                                  \
   }
 
 #define SUFFIX() used_ ^= (1 << i)
