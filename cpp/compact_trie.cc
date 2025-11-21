@@ -10,8 +10,7 @@
 
 using namespace std;
 
-CompactTrie::CompactTrie(CompactNode *nodes, size_t num_nodes)
-    : nodes_(nodes), file_size_(0), fd_(-1) {}
+CompactTrie::CompactTrie(CompactNode *nodes) : nodes_(nodes), file_size_(0), fd_(-1) {}
 
 CompactTrie::~CompactTrie() {
   // Clean up mmap'd memory.
@@ -64,19 +63,17 @@ unique_ptr<CompactTrie> CompactTrie::CreateFromBinaryFile(const char *filename) 
   }
 
   size_t file_size = st.st_size;
-  if (file_size % sizeof(CompactNode) != 0) {
+  if (file_size % sizeof(uint32_t) != 0) {
     fprintf(
         stderr,
         "Invalid binary dictionary size: %zu bytes (not a multiple of %zu)\n",
         file_size,
-        sizeof(CompactNode)
+        sizeof(uint32_t)
     );
     close(fd);
     return nullptr;
   }
-
-  size_t num_nodes = file_size / sizeof(CompactNode);
-  if (num_nodes == 0) {
+  if (file_size == 0) {
     fprintf(stderr, "Empty binary dictionary\n");
     close(fd);
     return nullptr;
@@ -94,14 +91,13 @@ unique_ptr<CompactTrie> CompactTrie::CreateFromBinaryFile(const char *filename) 
 
   fprintf(
       stderr,
-      "Loaded binary trie: %zu nodes (%zu bytes, %.2f MB)\n",
-      num_nodes,
+      "Loaded binary trie: %zu bytes, %.2f MB\n",
       file_size,
       file_size / (1024.0 * 1024.0)
   );
 
   // Create root CompactTrie
-  CompactTrie *root = new CompactTrie(nodes, num_nodes);
+  CompactTrie *root = new CompactTrie(nodes);
   root->file_size_ = file_size;
   root->fd_ = fd;
 

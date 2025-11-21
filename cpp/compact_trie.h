@@ -43,7 +43,7 @@ struct CompactNode {
 class CompactTrie {
  public:
   // Constructor for a view into a specific node
-  CompactTrie(CompactNode *nodes, size_t num_nodes);
+  CompactTrie(CompactNode *nodes);
 
   CompactNode *GetRoot() { return nodes_; }
 

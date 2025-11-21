@@ -39,7 +39,7 @@ class Boggler {
   int bd_[M * N];
   unsigned int score_;
   unsigned int runs_;
-  vector<uint32_t> word_marks_;
+  vector<uint16_t> word_marks_;
 };
 
 template <int M, int N>
