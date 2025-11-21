@@ -96,6 +96,10 @@ unsigned int Boggler<M, N>::InternalScore() {
   used_ = 0;
   score_ = 0;
   runs_++;
+  if (runs_ == 65535) {
+    runs_ = 1;
+    std::fill(word_marks_.begin(), word_marks_.end(), 0);
+  }
   for (int i = 0; i < M * N; i++) {
     int c = bd_[i];
     if (dict_->StartsWord(c)) {
