@@ -1,13 +1,18 @@
 # boggle-zoo
 
-Fast Boggle board scoring library. This is a stripped-down version of [hybrid-boggle](https://github.com/danvk/hybrid-boggle) focused solely on scoring Boggle boards as quickly as possible.
+Experiments with different data structures for scoring Boggle boards. Each branch in this repo has a different data structure. These define the memory/speed tradeoff.
 
-## Features
+See [jpa-boggle](https://github.com/danvk/jpa-boggle) for a write-up of the results. The ultimate goal is to understand JohnPaul Adamovsky's [ADTDAWG] data structure, and whether it represents a significant advance over a more standard [Trie]. (TL;DR: it doesn't.)
 
-- **Fast C++ implementation** with Python bindings via pybind11
-- **Pure Python fallback** for development and testing
-- Support for multiple board sizes: 2x2, 2x3, 3x3, 3x4, 4x4, 4x5, 5x5
-- Command-line tools for scoring boards and performance testing
+Implementations:
+
+- hash_map
+- Indexed trie
+- Popcount trie
+- Pure DAWG ("multiboggle" only -- no word de-duping)
+- DAWG + count below
+- DAWG + tracking number
+- ADTDAWG
 
 ## Setup
 
@@ -22,6 +27,12 @@ make
 
 # Run tests
 make test
+
+# Generate binary-encoded dictionaries
+./encode_all.sh
+
+# Run performance tests
+./perf.sh
 ```
 
 ## Usage
@@ -35,12 +46,6 @@ Score one or more boards from stdin:
 echo "streaedlp" | uv run python -m boggle.score --size 33
 # Output: streaedlp: 545
 
-# Score multiple boards
-echo -e "abcdefghi\nstreaedlp" | uv run python -m boggle.score --size 33
-
-# Show all words found (Python implementation only)
-echo "streaedlp" | uv run python -m boggle.score --size 33 --python --print_words
-
 # Score a 4x4 board
 echo "perslatgsineters" | uv run python -m boggle.score --size 44
 # Output: perslatgsineters: 3625
@@ -48,18 +53,15 @@ echo "perslatgsineters" | uv run python -m boggle.score --size 44
 
 ### Performance Testing
 
-Test board scoring performance without I/O overhead:
-
 ```bash
-# Score 100,000 random 3x3 boards
-uv run python -m boggle.perf --size 33 100000
+# Generate binary-encoded dictionaries
+./encode_all.sh
 
-# Score 1,000 random 4x4 boards
-uv run python -m boggle.perf --size 44 1000
-
-# Use Python implementation (much slower)
-uv run python -m boggle.perf --size 33 1000 --python
+# Run performance tests
+./perf.sh
 ```
+
+This reports RAM usage and performance numbers (boards/sec) on random and "good" boards (boards that are variations on the highest-scoring board).
 
 ## Board Representation
 
@@ -95,44 +97,9 @@ The letter "Q" represents "Qu" and is worth 2 letters for scoring purposes.
 ## Performance
 
 On an M2 MacBook, the C++ implementation can score:
+
 - ~200,000 boards/second for 4×4 boards
 - ~100,000 boards/second for 3×3 boards
-
-The Python implementation is approximately 50× slower.
-
-## Dictionary
-
-By default, the `enable2k` word list is used. You can specify a different dictionary with:
-
-```bash
-uv run python -m boggle.score --dictionary wordlists/twl06.txt
-```
-
-## Development
-
-Build the extension:
-```bash
-make
-```
-
-Run tests:
-```bash
-make test
-```
-
-Format code:
-```bash
-make format
-```
-
-Clean build artifacts:
-```bash
-make clean
-```
-
-## License
-
-Same as hybrid-boggle (check the original repository for details).
 
 ## Credits
 
