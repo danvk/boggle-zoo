@@ -2,7 +2,7 @@
 
 Experiments with different data structures for scoring Boggle boards. Each branch in this repo has a different data structure. These define the memory/speed tradeoff.
 
-See [jpa-boggle](https://github.com/danvk/jpa-boggle) for a write-up of the results. The ultimate goal is to understand JohnPaul Adamovsky's [ADTDAWG] data structure, and whether it represents a significant advance over a more standard [Trie]. (TL;DR: it doesn't.)
+See [jpa-boggle](https://github.com/danvk/jpa-boggle) for a write-up of the results. The ultimate goal is to understand JohnPaul Adamovsky's [ADTDAWG](https://pages.pathcom.com/~vadco/adtdawg.html) data structure, and whether it represents a significant advance over a more standard [Trie](https://en.wikipedia.org/wiki/Trie). (TL;DR: it doesn't.)
 
 Implementations:
 
