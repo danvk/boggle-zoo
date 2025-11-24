@@ -96,10 +96,12 @@ The letter "Q" represents "Qu" and is worth 2 letters for scoring purposes.
 
 ## Performance
 
-On an M2 MacBook, the C++ implementation can score:
+On an M2 MacBook, the Popcount Trie implementation uses 3.0 MB of RAM for the full TWL06 dictionary and can score:
 
-- ~200,000 boards/second for 4×4 boards
-- ~100,000 boards/second for 3×3 boards
+- ~110,000 boards/second for random 5×5 boards
+- ~8,200 boards/second for "good" 5x5 boards
+
+See [jpa-boggle](https://github.com/danvk/jpa-boggle) for more details.
 
 ## Credits
 
