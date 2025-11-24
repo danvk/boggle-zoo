@@ -6,13 +6,13 @@ See [jpa-boggle](https://github.com/danvk/jpa-boggle) for a write-up of the resu
 
 Implementations:
 
-- hash_map
-- Indexed trie
-- Popcount trie
-- Pure DAWG ("multiboggle" only -- no word de-duping)
-- DAWG + count below
-- DAWG + tracking number
-- ADTDAWG
+- [hash_map](https://github.com/danvk/boggle-zoo/tree/hashmap)
+- [Indexed trie](https://github.com/danvk/boggle-zoo/tree/main)
+- [Popcount trie](https://github.com/danvk/boggle-zoo/tree/popcount-trie)
+- [Pure DAWG](https://github.com/danvk/boggle-zoo/tree/pure-dawg) ("multiboggle" only -- no word de-duping)
+- [DAWG + count below](https://github.com/danvk/boggle-zoo/tree/count-under-dawg)
+- [DAWG + tracking number](https://github.com/danvk/boggle-zoo/tree/tracking-dawg)
+- [ADTDAWG](https://github.com/danvk/boggle-zoo/tree/adtdawg)
 
 ## Setup
 
